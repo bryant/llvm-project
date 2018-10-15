@@ -3,6 +3,7 @@ add_llvm_library(LLVMTransformUtils
   AddDiscriminators.cpp
   BasicBlockUtils.cpp
   BreakCriticalEdges.cpp
+  BreakCriticalPhis.cpp
   BuildLibCalls.cpp
   BypassSlowDivision.cpp
   CallPromotionUtils.cpp

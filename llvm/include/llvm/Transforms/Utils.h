@@ -72,6 +72,9 @@ FunctionPass *createPostInlineEntryExitInstrumenterPass();
 FunctionPass *createBreakCriticalEdgesPass();
 extern char &BreakCriticalEdgesID;
 
+FunctionPass *createBreakCriticalPhisPass();
+extern char &BreakCriticalPhisID;
+
 //===----------------------------------------------------------------------===//
 //
 // LCSSA - This pass inserts phi nodes at loop boundaries to simplify other loop

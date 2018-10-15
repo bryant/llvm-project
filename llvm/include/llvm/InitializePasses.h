@@ -84,6 +84,7 @@ void initializeBranchFolderPassPass(PassRegistry&);
 void initializeBranchProbabilityInfoWrapperPassPass(PassRegistry&);
 void initializeBranchRelaxationPass(PassRegistry&);
 void initializeBreakCriticalEdgesPass(PassRegistry&);
+void initializeBreakCriticalPhisPass(PassRegistry&);
 void initializeBreakFalseDepsPass(PassRegistry&);
 void initializeCanonicalizeAliasesLegacyPassPass(PassRegistry &);
 void initializeCFGOnlyPrinterLegacyPassPass(PassRegistry&);
