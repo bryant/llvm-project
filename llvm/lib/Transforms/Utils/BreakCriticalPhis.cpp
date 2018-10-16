@@ -80,7 +80,9 @@ bool BreakCriticalPhis::runOnFunction(Function &F) {
       // Assumption: Useless phis have been removed and presence of phis in BB
       // implies having multiple preds. So this is a critical edge iff pred
       // block has multiple succs.
-      if (Pred->getTerminator()->getNumSuccessors() > 1 && !IsBackEdge()) {
+      TerminatorInst &PT = *Pred->getTerminator();
+      if (PT.getNumSuccessors() > 1 && !isa<IndirectBrInst>(&PT) &&
+          !IsBackEdge()) {
         LLVM_DEBUG(dbgs() << "Queueing edge (" << Pred->getName() << ", "
                           << BB.getName() << ")\n");
         ToSplit.insert({Pred, &BB});
