@@ -98,7 +98,7 @@ bool BreakCriticalPhis::runOnFunction(Function &F) {
   // useless (succ only has one pred), SplitCriticalEdge will catch this and
   // refuse to split, which is also okay.
   for (BasicBlock &BB : F) {
-    TerminatorInst &TI = *BB.getTerminator();
+    Instruction &TI = *BB.getTerminator();
     if (TI.getNumSuccessors() <= 1 || isa<IndirectBrInst>(&TI))
       continue;
 
