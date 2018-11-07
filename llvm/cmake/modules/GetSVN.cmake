@@ -88,6 +88,9 @@ function(get_source_info path revision repository)
     get_source_info_git_svn("${path}" revision repository)
   elseif (EXISTS "${path}/.git")
     get_source_info_git("${path}" revision repository)
+   # Account for monorepo.
+  elseif (EXISTS "${path}/../.git")
+    get_source_info_git("${path}/.." revision repository)
   endif()
 endfunction()
 
@@ -97,7 +100,11 @@ function(append_info name path)
   string(STRIP "${repository}" repository)
   file(APPEND "${HEADER_FILE}.txt"
     "#define ${name}_REVISION \"${revision}\"\n")
+  message("${HEADER_FILE}.txt"
+    "#define ${name}_REVISION \"${revision}\"\n")
   file(APPEND "${HEADER_FILE}.txt"
+    "#define ${name}_REPOSITORY \"${repository}\"\n")
+  message("${HEADER_FILE}.txt"
     "#define ${name}_REPOSITORY \"${repository}\"\n")
 endfunction()
 
