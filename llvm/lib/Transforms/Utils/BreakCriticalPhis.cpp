@@ -93,8 +93,9 @@ struct BreakCriticalPhis : public FunctionPass {
     AU.addPreserved<DominatorTreeWrapperPass>();
   }
 
-  BasicBlock *splitCritEdge(TerminatorInst &TI, unsigned SuccIdx,
+  BasicBlock *splitCritEdge(Instruction &TI, unsigned SuccIdx,
                             DominatorTree &DT, LoopInfo *LI) {
+    assert(TI.isTerminator());
     CriticalEdgeSplittingOptions Opts(&DT, LI);
     return SplitCriticalEdge(&TI, SuccIdx);
   }
@@ -129,7 +130,7 @@ bool BreakCriticalPhis::runOnFunction(Function &F) {
   // but only one pred, SplitCriticalEdge will catch this and refuse to split,
   // which is also okay.
   for (BasicBlock &BB : F) {
-    TerminatorInst &TI = *BB.getTerminator();
+    Instruction &TI = *BB.getTerminator();
     if (TI.getNumSuccessors() <= 1 || isa<IndirectBrInst>(&TI))
       continue;
 
