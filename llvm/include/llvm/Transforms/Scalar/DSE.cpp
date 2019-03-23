@@ -1,0 +1,3 @@
+namespace llvm {
+    struct DSEPass
+}
