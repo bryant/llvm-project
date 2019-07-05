@@ -1,11 +1,5 @@
 import("//llvm/utils/TableGen/tablegen.gni")
 
-tablegen("AMDGPUGenAsmMatcher") {
-  visibility = [ ":LLVMAMDGPUCodeGen" ]
-  args = [ "-gen-asm-matcher" ]
-  td_file = "AMDGPU.td"
-}
-
 tablegen("AMDGPUGenCallingConv") {
   visibility = [ ":LLVMAMDGPUCodeGen" ]
   args = [ "-gen-callingconv" ]
@@ -18,16 +12,16 @@ tablegen("AMDGPUGenDAGISel") {
   td_file = "AMDGPU.td"
 }
 
-tablegen("AMDGPUGenFastISel") {
-  visibility = [ ":LLVMAMDGPUCodeGen" ]
-  args = [ "-gen-fast-isel" ]
-  td_file = "AMDGPU.td"
-}
-
 tablegen("AMDGPUGenGlobalISel") {
   visibility = [ ":LLVMAMDGPUCodeGen" ]
   args = [ "-gen-global-isel" ]
   td_file = "AMDGPU.td"
+}
+
+tablegen("AMDGPUGenInstrInfo") {
+    visibility = [ ":LLVMAMDGPUCodeGen" ]
+    args = [ "-gen-instr-info" ]
+    td_file = "AMDGPU.td"
 }
 
 tablegen("AMDGPUGenMCPseudoLowering") {
@@ -42,15 +36,78 @@ tablegen("AMDGPUGenRegisterBank") {
   td_file = "AMDGPU.td"
 }
 
+tablegen("AMDGPUGenRegisterInfo") {
+    visibility = [ ":LLVMAMDGPUCodeGen", "AsmParser", "Disassembler" ]
+    args = [ "-gen-register-info" ]
+    td_file = "AMDGPU.td"
+}
+
+tablegen("AMDGPUGenSearchableTables") {
+    visibility = [ ":LLVMAMDGPUCodeGen", "Utils" ]
+    args = [ "-gen-searchable-tables" ]
+    td_file = "AMDGPU.td"
+}
+
+tablegen("AMDGPUGenSubtargetInfo") {
+    visibility = [ ":LLVMAMDGPUCodeGen" ]
+    args = [ "-gen-subtarget" ]
+    td_file = "AMDGPU.td"
+}
+
+tablegen("R600GenCallingConv") {
+  visibility = [ ":LLVMAMDGPUCodeGen" ]
+  args = [ "-gen-callingconv" ]
+  td_file = "R600.td"
+}
+
+tablegen("R600GenDFAPacketizer") {
+  visibility = [ ":LLVMAMDGPUCodeGen" ]
+  args = [ "-gen-dfa-packetizer" ]
+  td_file = "R600.td"
+}
+
+tablegen("R600GenDAGISel") {
+    visibility = [ ":LLVMAMDGPUCodeGen" ]
+    args = [ "-gen-dag-isel" ]
+    td_file = "R600.td"
+}
+
+tablegen("R600GenInstrInfo") {
+    visibility = [ ":LLVMAMDGPUCodeGen" ]
+    args = [ "-gen-instr-info" ]
+    td_file = "R600.td"
+}
+
+tablegen("R600GenRegisterInfo") {
+    visibility = [ ":LLVMAMDGPUCodeGen", "MCTargetDesc" ]
+    args = [ "-gen-register-info" ]
+    td_file = "R600.td"
+}
+
+tablegen("R600GenSubtargetInfo") {
+    visibility = [ ":LLVMAMDGPUCodeGen" ]
+    args = [ "-gen-subtarget" ]
+    td_file = "R600.td"
+}
+
 static_library("LLVMAMDGPUCodeGen") {
   deps = [
-    # ":AMDGPUGenAsmMatcher",
-    # ":AMDGPUGenCallingConv",
-    # ":AMDGPUGenDAGISel",
-    # ":AMDGPUGenFastISel",
-    # ":AMDGPUGenGlobalISel",
-    # ":AMDGPUGenMCPseudoLowering",
-    # ":AMDGPUGenRegisterBank",
+    ":AMDGPUGenCallingConv",
+    ":AMDGPUGenDAGISel",
+    ":AMDGPUGenGlobalISel",
+    ":AMDGPUGenInstrInfo",
+    ":AMDGPUGenMCPseudoLowering",
+    ":AMDGPUGenRegisterBank",
+    ":AMDGPUGenRegisterInfo",
+    ":AMDGPUGenSearchableTables",
+    ":AMDGPUGenSubtargetInfo",
+
+    ":R600GenCallingConv",
+    ":R600GenDFAPacketizer",
+    ":R600GenDAGISel",
+    ":R600GenInstrInfo",
+    ":R600GenRegisterInfo",
+    ":R600GenSubtargetInfo",
 
     "MCTargetDesc",
     "TargetInfo",
@@ -64,12 +121,12 @@ static_library("LLVMAMDGPUCodeGen") {
     "//llvm/lib/CodeGen/MIRParser",
     "//llvm/lib/CodeGen/SelectionDAG",
     "//llvm/lib/IR",
-    "//llvm/lib/IPO",
     "//llvm/lib/MC",
     "//llvm/lib/Support",
     "//llvm/lib/Target",
-    "//llvm/lib/Transform/Scalar",
-    "//llvm/lib/Transform/Utils",
+    "//llvm/lib/Transforms/Scalar",
+    "//llvm/lib/Transforms/IPO",
+    "//llvm/lib/Transforms/Utils",
     "//llvm/lib/Transforms/Vectorize",
   ]
   include_dirs = [ "." ]
@@ -155,6 +212,7 @@ static_library("LLVMAMDGPUCodeGen") {
   "SILoadStoreOptimizer.cpp",
   "SILowerControlFlow.cpp",
   "SILowerI1Copies.cpp",
+  "SILowerSGPRSpills.cpp",
   "SIMachineFunctionInfo.cpp",
   "SIMachineScheduler.cpp",
   "SIMemoryLegalizer.cpp",
@@ -179,9 +237,9 @@ group("AMDGPU") {
   deps = [
     ":LLVMAMDGPUCodeGen",
     "AsmParser",
-    # "Disassembler",
-    # "MCTargetDesc",
-    # "TargetInfo",
-    # "Utils",
+    "Disassembler",
+    "MCTargetDesc",
+    "TargetInfo",
+    "Utils",
   ]
 }
