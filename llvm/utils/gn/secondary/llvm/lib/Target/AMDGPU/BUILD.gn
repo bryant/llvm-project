@@ -15,7 +15,7 @@ tablegen("AMDGPUGenDAGISel") {
 tablegen("AMDGPUGenGlobalISel") {
   visibility = [ ":LLVMAMDGPUCodeGen" ]
   args = [ "-gen-global-isel" ]
-  td_file = "AMDGPU.td"
+  td_file = "AMDGPUGISel.td"
 }
 
 tablegen("AMDGPUGenInstrInfo") {
