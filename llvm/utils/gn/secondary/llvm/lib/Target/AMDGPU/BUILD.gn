@@ -44,13 +44,13 @@ tablegen("AMDGPUGenRegisterBank") {
 
 static_library("LLVMAMDGPUCodeGen") {
   deps = [
-    ":AMDGPUGenAsmMatcher",
-    ":AMDGPUGenCallingConv",
-    ":AMDGPUGenDAGISel",
-    ":AMDGPUGenFastISel",
-    ":AMDGPUGenGlobalISel",
-    ":AMDGPUGenMCPseudoLowering",
-    ":AMDGPUGenRegisterBank",
+    # ":AMDGPUGenAsmMatcher",
+    # ":AMDGPUGenCallingConv",
+    # ":AMDGPUGenDAGISel",
+    # ":AMDGPUGenFastISel",
+    # ":AMDGPUGenGlobalISel",
+    # ":AMDGPUGenMCPseudoLowering",
+    # ":AMDGPUGenRegisterBank",
 
     "MCTargetDesc",
     "TargetInfo",
@@ -179,9 +179,9 @@ group("AMDGPU") {
   deps = [
     ":LLVMAMDGPUCodeGen",
     "AsmParser",
-    "Disassembler",
-    "MCTargetDesc",
-    "TargetInfo",
-    "Utils",
+    # "Disassembler",
+    # "MCTargetDesc",
+    # "TargetInfo",
+    # "Utils",
   ]
 }
