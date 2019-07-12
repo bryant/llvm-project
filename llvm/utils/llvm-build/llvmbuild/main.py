@@ -188,6 +188,32 @@ class LLVMProjectInfo(object):
                 visit(c, depth + 1)
         visit(self.component_info_map['$ROOT'])
 
+    def gn_check(self):
+        from subprocess import check_output, CalledProcessError
+        from difflib import unified_diff
+
+        def togn(c):
+            return "//llvm" + c.subpath + ":" + c.subpath.rsplit("/", 1)[1]
+        indent = lambda l: " " * 4 + l
+
+        bypath = {v.subpath: v for v in self.component_info_map.values()}
+
+        for name in sorted(bypath):
+            comp = bypath[name]
+            if not hasattr(comp, "required_libraries"):
+                continue
+
+            print(togn(comp))
+
+            try:
+                cmd = "/usr/local/bin/gn desc /tmp/b {} deps".format(togn(comp)).split()
+                gndeps = sorted(check_output(cmd).strip().splitlines())
+            except CalledProcessError, e:
+                print(indent(" had trouble..." + str(e)))
+            else:
+                lldeps = sorted(togn(self.component_info_map[req_]) for req_ in comp.required_libraries)
+                print("\n".join(indent(l) for l in unified_diff(lldeps, gndeps)))
+
     def write_components(self, output_path):
         # Organize all the components by the directory their LLVMBuild file
         # should go in.
@@ -808,7 +834,7 @@ def main():
                                            'Function.cpp')):
             parser.error('invalid LLVM source root: %r' % source_root)
     else:
-        llvmbuild_path = os.path.dirname(__file__)
+        llvmbuild_path = os.path.dirname(os.path.abspath(__file__))
         llvm_build_path = os.path.dirname(llvmbuild_path)
         utils_path = os.path.dirname(llvm_build_path)
         source_root = os.path.dirname(utils_path)
@@ -829,7 +855,7 @@ def main():
 
     # Print the component tree, if requested.
     if opts.print_tree:
-        project_info.print_tree()
+        project_info.gn_check()
 
     # Write out the components, if requested. This is useful for auto-upgrading
     # the schema.
