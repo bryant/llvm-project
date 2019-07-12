@@ -18,6 +18,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Analysis/CFGPrinter.h"
+#include "llvm/IR/Dominators.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/FileSystem.h"
 using namespace llvm;
@@ -91,9 +92,39 @@ PreservedAnalyses CFGOnlyViewerPass::run(Function &F,
   return PreservedAnalyses::all();
 }
 
-static void writeCFGToDotFile(Function &F, bool CFGOnly = false) {
+struct DJWriter : public GraphWriter<const Function *> {
+  DominatorTree &DT;
+  DJWriter(raw_ostream &O, const Function *F, bool SN, DominatorTree &DT)
+      : GraphWriter<const Function *>(O, F, SN), DT(DT) {}
+
+  void writeEdge(NodeRef Node, unsigned edgeidx, child_iterator EI) override {
+    if (NodeRef TargetNode = *EI) {
+      int DestPort = -1;
+      if (DTraits.edgeTargetsEdgeSource(Node, EI)) {
+        child_iterator TargetIt = DTraits.getEdgeTarget(Node, EI);
+
+        // Figure out which edge this targets...
+        unsigned Offset =
+            (unsigned)std::distance(GTraits::child_begin(TargetNode), TargetIt);
+        DestPort = static_cast<int>(Offset);
+      }
+
+      if (DTraits.getEdgeSourceLabel(Node, EI).empty())
+        edgeidx = -1;
+
+      std::string Attr = DTraits.getEdgeAttributes(Node, EI, G);
+      Attr += "; color=green";
+
+      emitEdge(static_cast<const void *>(Node), edgeidx,
+               static_cast<const void *>(TargetNode), DestPort, Attr);
+    }
+  }
+};
+
+static void writeCFGToDotFile(Function &F, bool CFGOnly = false,
+                              DominatorTree *DT = nullptr) {
   if (!CFGFuncName.empty() && !F.getName().contains(CFGFuncName))
-     return;
+    return;
   std::string Filename =
       (CFGDotFilenamePrefix + "." + F.getName() + ".dot").str();
   errs() << "Writing '" << Filename << "'...";
@@ -101,9 +132,18 @@ static void writeCFGToDotFile(Function &F, bool CFGOnly = false) {
   std::error_code EC;
   raw_fd_ostream File(Filename, EC, sys::fs::F_Text);
 
-  if (!EC)
-    WriteGraph(File, (const Function*)&F, CFGOnly);
-  else
+  if (!EC) {
+    // Start the graph emission process...
+    if (DT) {
+      DJWriter W(File, &F, CFGOnly, *DT);
+      // Emit the graph.
+      W.writeGraph("");
+    } else {
+      GraphWriter<const Function *> W(File, &F, CFGOnly);
+      // Emit the graph.
+      W.writeGraph("");
+    }
+  } else
     errs() << "  error opening file for writing!";
   errs() << "\n";
 }
@@ -134,7 +174,8 @@ INITIALIZE_PASS(CFGPrinterLegacyPass, "dot-cfg", "Print CFG of function to 'dot'
 
 PreservedAnalyses CFGPrinterPass::run(Function &F,
                                       FunctionAnalysisManager &AM) {
-  writeCFGToDotFile(F);
+  DominatorTree &DT = AM.getResult<DominatorTreeAnalysis>(F);
+  writeCFGToDotFile(F, /* CFGOnly */ false, &DT);
   return PreservedAnalyses::all();
 }
 

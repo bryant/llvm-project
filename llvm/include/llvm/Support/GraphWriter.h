@@ -64,6 +64,7 @@ bool DisplayGraph(StringRef Filename, bool wait = true,
 
 template<typename GraphType>
 class GraphWriter {
+protected:
   raw_ostream &O;
   const GraphType &G;
 
@@ -107,9 +108,11 @@ class GraphWriter {
   }
 
 public:
-  GraphWriter(raw_ostream &o, const GraphType &g, bool SN) : O(o), G(g) {
-    DTraits = DOTTraits(SN);
-  }
+  GraphWriter(raw_ostream &o, const GraphType &g, bool SN)
+      : O(o), G(g), DTraits(SN) {}
+
+  GraphWriter(raw_ostream &o, const GraphType &g, const DOTTraits &D)
+      : O(o), G(g), DTraits(D) {}
 
   void writeGraph(const std::string &Title = "") {
     // Output the header for the graph...
@@ -235,7 +238,7 @@ public:
         writeEdge(Node, 64, EI);
   }
 
-  void writeEdge(NodeRef Node, unsigned edgeidx, child_iterator EI) {
+  virtual void writeEdge(NodeRef Node, unsigned edgeidx, child_iterator EI) {
     if (NodeRef TargetNode = *EI) {
       int DestPort = -1;
       if (DTraits.edgeTargetsEdgeSource(Node, EI)) {
