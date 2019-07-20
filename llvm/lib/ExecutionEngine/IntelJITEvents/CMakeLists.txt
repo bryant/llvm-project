@@ -1,3 +1,12 @@
+set(LLVM_LINK_COMPONENTS
+  CodeGen
+  Core
+  DebugInfoDWARF
+  ExecutionEngine
+  Object
+  Support
+  )
+
 include_directories( ${CMAKE_CURRENT_SOURCE_DIR}/.. )
 
 if( HAVE_LIBDL )

@@ -1,3 +1,9 @@
+set(LLVM_LINK_COMPONENTS
+  MC
+  SparcInfo
+  Support
+  )
+
 add_llvm_library(LLVMSparcDesc
   SparcAsmBackend.cpp
   SparcELFObjectWriter.cpp

@@ -1,3 +1,15 @@
+set(LLVM_LINK_COMPONENTS
+  AsmPrinter
+  BPFDesc
+  BPFInfo
+  CodeGen
+  Core
+  MC
+  SelectionDAG
+  Support
+  Target
+  )
+
 set(LLVM_TARGET_DEFINITIONS BPF.td)
 
 tablegen(LLVM BPFGenAsmMatcher.inc -gen-asm-matcher)

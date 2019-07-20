@@ -1,3 +1,18 @@
+set(LLVM_LINK_COMPONENTS
+  Analysis
+  BinaryFormat
+  CodeGen
+  Core
+  DebugInfoCodeView
+  DebugInfoDWARF
+  DebugInfoMSF
+  MC
+  MCParser
+  Remarks
+  Support
+  Target
+  )
+
 add_llvm_library(LLVMAsmPrinter
   AccelTable.cpp
   AddressPool.cpp

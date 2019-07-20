@@ -1,3 +1,19 @@
+set(LLVM_LINK_COMPONENTS
+  Analysis
+  AsmPrinter
+  CodeGen
+  Core
+  GlobalISel
+  MC
+  ProfileData
+  SelectionDAG
+  Support
+  Target
+  X86Desc
+  X86Info
+  X86Utils
+  )
+
 set(LLVM_TARGET_DEFINITIONS X86.td)
 
 tablegen(LLVM X86GenAsmMatcher.inc -gen-asm-matcher)

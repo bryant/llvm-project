@@ -1,3 +1,9 @@
+set(LLVM_LINK_COMPONENTS
+  DebugInfoCodeView
+  Object
+  Support
+  )
+
 add_llvm_library(LLVMObjectYAML
   CodeViewYAMLDebugSections.cpp
   CodeViewYAMLSymbols.cpp

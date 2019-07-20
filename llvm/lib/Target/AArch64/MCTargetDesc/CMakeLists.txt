@@ -1,3 +1,10 @@
+set(LLVM_LINK_COMPONENTS
+  AArch64Info
+  AArch64Utils
+  MC
+  Support
+  )
+
 add_llvm_library(LLVMAArch64Desc
   AArch64AsmBackend.cpp
   AArch64ELFObjectWriter.cpp

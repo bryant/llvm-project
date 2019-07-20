@@ -1,3 +1,8 @@
+set(LLVM_LINK_COMPONENTS
+  MC
+  Support
+  )
+
 add_llvm_library(LLVMMCParser
   AsmLexer.cpp
   AsmParser.cpp

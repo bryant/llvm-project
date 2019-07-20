@@ -1,3 +1,15 @@
+set(LLVM_LINK_COMPONENTS
+  AsmPrinter
+  CodeGen
+  Core
+  MC
+  MSP430Desc
+  MSP430Info
+  SelectionDAG
+  Support
+  Target
+  )
+
 set(LLVM_TARGET_DEFINITIONS MSP430.td)
 
 tablegen(LLVM MSP430GenAsmMatcher.inc -gen-asm-matcher)

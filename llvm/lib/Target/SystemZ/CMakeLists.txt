@@ -1,3 +1,17 @@
+set(LLVM_LINK_COMPONENTS
+  Analysis
+  AsmPrinter
+  CodeGen
+  Core
+  MC
+  ScalarOpts
+  SelectionDAG
+  Support
+  SystemZDesc
+  SystemZInfo
+  Target
+  )
+
 set(LLVM_TARGET_DEFINITIONS SystemZ.td)
 
 tablegen(LLVM SystemZGenAsmMatcher.inc -gen-asm-matcher)

@@ -1,3 +1,10 @@
+set(LLVM_LINK_COMPONENTS
+  Analysis
+  Core
+  Support
+  TransformUtils
+  )
+
 add_llvm_library(LLVMObjCARCOpts
   ObjCARC.cpp
   ObjCARCOpts.cpp

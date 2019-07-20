@@ -1,3 +1,9 @@
+set(LLVM_LINK_COMPONENTS
+  BitstreamReader
+  Core
+  Support
+  )
+
 add_llvm_library(LLVMBitReader
   BitcodeAnalyzer.cpp
   BitReader.cpp

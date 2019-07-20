@@ -1,3 +1,10 @@
+set(LLVM_LINK_COMPONENTS
+  Analysis
+  Core
+  Support
+  TransformUtils
+  )
+
 add_llvm_library(LLVMAggressiveInstCombine
   AggressiveInstCombine.cpp
   TruncInstCombine.cpp

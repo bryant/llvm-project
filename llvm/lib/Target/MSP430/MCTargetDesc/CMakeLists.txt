@@ -1,3 +1,9 @@
+set(LLVM_LINK_COMPONENTS
+  MC
+  MSP430Info
+  Support
+  )
+
 add_llvm_library(LLVMMSP430Desc
   MSP430AsmBackend.cpp
   MSP430ELFObjectWriter.cpp

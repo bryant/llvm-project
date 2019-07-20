@@ -1,3 +1,7 @@
+set(LLVM_LINK_COMPONENTS
+  Support
+  )
+
 set(system_libs)
 if( CMAKE_HOST_UNIX )
   if( LLVM_LIBXML2_ENABLED )

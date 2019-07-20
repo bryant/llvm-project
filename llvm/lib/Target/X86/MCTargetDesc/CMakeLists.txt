@@ -1,3 +1,12 @@
+set(LLVM_LINK_COMPONENTS
+  MC
+  MCDisassembler
+  Object
+  Support
+  X86Info
+  X86Utils
+  )
+
 add_llvm_library(LLVMX86Desc
   X86ATTInstPrinter.cpp
   X86IntelInstPrinter.cpp

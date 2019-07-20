@@ -1,3 +1,17 @@
+set(LLVM_LINK_COMPONENTS
+  Analysis
+  AsmPrinter
+  CodeGen
+  Core
+  GlobalISel
+  MC
+  MipsDesc
+  MipsInfo
+  SelectionDAG
+  Support
+  Target
+  )
+
 set(LLVM_TARGET_DEFINITIONS Mips.td)
 
 tablegen(LLVM MipsGenAsmMatcher.inc -gen-asm-matcher)

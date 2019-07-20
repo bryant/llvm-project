@@ -1,3 +1,8 @@
+set(LLVM_LINK_COMPONENTS
+  Object
+  Support
+  )
+
 add_llvm_library(LLVMXRay
   BlockIndexer.cpp
   BlockPrinter.cpp

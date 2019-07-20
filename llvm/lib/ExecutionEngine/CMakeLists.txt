@@ -1,3 +1,12 @@
+set(LLVM_LINK_COMPONENTS
+  Core
+  MC
+  Object
+  RuntimeDyld
+  Support
+  Target
+  )
+
 
 
 add_llvm_library(LLVMExecutionEngine

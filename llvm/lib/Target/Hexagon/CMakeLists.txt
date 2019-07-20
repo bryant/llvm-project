@@ -1,3 +1,20 @@
+set(LLVM_LINK_COMPONENTS
+  Analysis
+  AsmPrinter
+  CodeGen
+  Core
+  HexagonAsmParser
+  HexagonDesc
+  HexagonInfo
+  IPO
+  MC
+  ScalarOpts
+  SelectionDAG
+  Support
+  Target
+  TransformUtils
+  )
+
 set(LLVM_TARGET_DEFINITIONS Hexagon.td)
 
 tablegen(LLVM HexagonGenAsmMatcher.inc -gen-asm-matcher)

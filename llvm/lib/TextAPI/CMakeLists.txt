@@ -1,3 +1,8 @@
+set(LLVM_LINK_COMPONENTS
+  BinaryFormat
+  Support
+  )
+
 add_llvm_library(LLVMTextAPI
   ELF/ELFStub.cpp
   ELF/TBEHandler.cpp

@@ -1,3 +1,9 @@
+set(LLVM_LINK_COMPONENTS
+  HexagonInfo
+  MC
+  Support
+  )
+
 add_llvm_library(LLVMHexagonDesc
   HexagonAsmBackend.cpp
   HexagonELFObjectWriter.cpp

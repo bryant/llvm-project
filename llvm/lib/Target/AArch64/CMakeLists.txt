@@ -1,3 +1,20 @@
+set(LLVM_LINK_COMPONENTS
+  AArch64Desc
+  AArch64Info
+  AArch64Utils
+  Analysis
+  AsmPrinter
+  CodeGen
+  Core
+  GlobalISel
+  MC
+  ScalarOpts
+  SelectionDAG
+  Support
+  Target
+  TransformUtils
+  )
+
 set(LLVM_TARGET_DEFINITIONS AArch64.td)
 
 tablegen(LLVM AArch64GenAsmMatcher.inc -gen-asm-matcher)

@@ -1,3 +1,10 @@
+set(LLVM_LINK_COMPONENTS
+  Core
+  Object
+  ProfileData
+  Support
+  )
+
 add_llvm_library(LLVMCoverage
   CoverageMapping.cpp
   CoverageMappingWriter.cpp

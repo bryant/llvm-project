@@ -1,3 +1,17 @@
+set(LLVM_LINK_COMPONENTS
+  ARCDesc
+  ARCInfo
+  Analysis
+  AsmPrinter
+  CodeGen
+  Core
+  MC
+  SelectionDAG
+  Support
+  Target
+  TransformUtils
+  )
+
 set(LLVM_TARGET_DEFINITIONS ARC.td)
 
 tablegen(LLVM ARCGenAsmWriter.inc -gen-asm-writer)

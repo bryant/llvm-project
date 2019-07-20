@@ -1,3 +1,19 @@
+set(LLVM_LINK_COMPONENTS
+  Analysis
+  AsmPrinter
+  BinaryFormat
+  CodeGen
+  Core
+  MC
+  ScalarOpts
+  SelectionDAG
+  Support
+  Target
+  TransformUtils
+  WebAssemblyDesc
+  WebAssemblyInfo
+  )
+
 set(LLVM_TARGET_DEFINITIONS WebAssembly.td)
 
 tablegen(LLVM WebAssemblyGenAsmMatcher.inc -gen-asm-matcher)

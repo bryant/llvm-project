@@ -1,3 +1,10 @@
+set(LLVM_LINK_COMPONENTS
+  CodeGen
+  Core
+  ExecutionEngine
+  Support
+  )
+
 # Make sure that the path to libffi headers is on the command
 # line. That path can be a compiler's non-default path even when
 # FFI_INCLUDE_DIR was not used, because cmake has its own paths for

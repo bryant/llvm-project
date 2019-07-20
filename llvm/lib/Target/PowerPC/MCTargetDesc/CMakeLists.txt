@@ -1,3 +1,9 @@
+set(LLVM_LINK_COMPONENTS
+  MC
+  PowerPCInfo
+  Support
+  )
+
 add_llvm_library(LLVMPowerPCDesc
   PPCAsmBackend.cpp
   PPCInstPrinter.cpp

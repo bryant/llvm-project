@@ -1,3 +1,12 @@
+set(LLVM_LINK_COMPONENTS
+  Analysis
+  Core
+  MC
+  ProfileData
+  Support
+  TransformUtils
+  )
+
 add_llvm_library(LLVMInstrumentation
   AddressSanitizer.cpp
   BoundsChecking.cpp
