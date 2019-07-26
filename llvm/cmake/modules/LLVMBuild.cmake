@@ -23,7 +23,7 @@ function(validate_component_deps components)
 endfunction(validate_component_deps)
 
 # Generates LibraryDependencies.inc, needed by tools/llvm-config.
-function(gen_libdep_inc components targets noninstalls)
+function(gen_libdep_inc out in components targets noninstalls)
   # Handle actual libs and track leaf comps for the "all" pseudo
   set(leaf_comps "${components}")
   list(FILTER leaf_comps INCLUDE REGEX "^LLVM")
@@ -113,11 +113,7 @@ function(gen_libdep_inc components targets noninstalls)
   list(SORT entries)
   join_list(LLVM_COMPONENTS ",\n" "${entries}")
   list(LENGTH entries LLVM_COMPONENT_COUNT)
-  configure_file(
-    ${CMAKE_SOURCE_DIR}/tools/llvm-config/LibraryDependencies.inc.in
-    ${CMAKE_BINARY_DIR}/tools/llvm-config/LibraryDependencies.inc
-    @ONLY
-  )
+  configure_file("${in}" "${out}" @ONLY)
 endfunction(gen_libdep_inc)
 
 # LLVMSomeLib => somelib

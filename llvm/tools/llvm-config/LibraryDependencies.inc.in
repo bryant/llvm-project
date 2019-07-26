@@ -17,7 +17,7 @@ struct AvailableComponent {
   bool IsInstalled;
 
   /// The list of libraries required when linking this component.
-  const char *RequiredLibraries[17];
+  const char *RequiredLibraries[50];
 } AvailableComponents[@LLVM_COMPONENT_COUNT@] = {
 @LLVM_COMPONENTS@
 };

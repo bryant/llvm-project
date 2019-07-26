@@ -658,6 +658,9 @@ if( ${PYTHON_VERSION_STRING} VERSION_LESS 2.7 )
   message(FATAL_ERROR "Python 2.7 or newer is required")
 endif()
 
+set(LLVMCONFIGLIBRARYDEPENDENCIESINC
+  "${LLVM_BINARY_DIR}/tools/llvm-config/LibraryDependencies.inc")
+
 if (NOT WITHOUT_LLVMBUILD_PY)
 ######
 # LLVMBuild Integration
@@ -674,8 +677,6 @@ if (NOT WITHOUT_LLVMBUILD_PY)
 #    automatically reconfigure ourselves.
 
 set(LLVMBUILDTOOL "${LLVM_MAIN_SRC_DIR}/utils/llvm-build/llvm-build")
-set(LLVMCONFIGLIBRARYDEPENDENCIESINC
-  "${LLVM_BINARY_DIR}/tools/llvm-config/LibraryDependencies.inc")
 set(LLVMBUILDCMAKEFRAG
   "${LLVM_BINARY_DIR}/LLVMBuild.cmake")
 
@@ -1003,11 +1004,18 @@ endif()
 # If we were instructed to build without llvm-build, do so now that all
 # components have been added.
 if (WITHOUT_LLVMBUILD_PY)
-message(Emitting LibraryDependencies.inc.)
-include(LLVMBuild)
-get_property(llvm_libz GLOBAL PROPERTY LLVM_LIBS)
-validate_component_deps("${llvm_libz}")
-gen_libdep_inc("${llvm_libz}" "${LLVM_TARGETS_TO_BUILD}" "")
+  get_filename_component(libdepsfile "${LLVMCONFIGLIBRARYDEPENDENCIESINC}" NAME)
+  message(STATUS "Emitting ${libdepsfile}")
+  include(LLVMBuild)
+  get_property(llvm_libz GLOBAL PROPERTY LLVM_LIBS)
+  validate_component_deps("${llvm_libz}")
+  gen_libdep_inc(
+      "${LLVMCONFIGLIBRARYDEPENDENCIESINC}"
+      "${CMAKE_SOURCE_DIR}/tools/llvm-config/LibraryDependencies.inc.in"
+        "${llvm_libz}"
+        "${LLVM_TARGETS_TO_BUILD}"
+        ""
+  )
 endif()
 
 add_subdirectory(cmake/modules)
