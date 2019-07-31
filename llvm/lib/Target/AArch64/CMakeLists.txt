@@ -65,6 +65,23 @@ add_llvm_target(AArch64CodeGen
 
   DEPENDS
   intrinsics_gen
+
+  LINK_COMPONENTS
+
+  AArch64Desc
+  AArch64Info
+  AArch64Utils
+  Analysis
+  AsmPrinter
+  CodeGen
+  Core
+  GlobalISel
+  MC
+  ScalarOpts
+  SelectionDAG
+  Support
+  Target
+  TransformUtils
 )
 
 add_subdirectory(AsmParser)

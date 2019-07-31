@@ -27,6 +27,18 @@ add_llvm_library(LLVMOrcJIT
 
   DEPENDS
   intrinsics_gen
+
+  LINK_COMPONENTS
+
+  Core
+  ExecutionEngine
+  JITLink
+  MC
+  Object
+  RuntimeDyld
+  Support
+  Target
+  TransformUtils
   )
 
 target_link_libraries(LLVMOrcJIT

@@ -6,4 +6,10 @@ add_llvm_library(LLVMMSP430Desc
   MSP430MCAsmInfo.cpp
   MSP430MCCodeEmitter.cpp
   MSP430MCTargetDesc.cpp
+
+  LINK_COMPONENTS
+
+  MC
+  MSP430Info
+  Support
   )

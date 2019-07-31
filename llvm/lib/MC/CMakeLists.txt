@@ -62,6 +62,12 @@ add_llvm_library(LLVMMC
 
   ADDITIONAL_HEADER_DIRS
   ${LLVM_MAIN_INCLUDE_DIR}/llvm/MC
+
+  LINK_COMPONENTS
+
+  BinaryFormat
+  DebugInfoCodeView
+  Support
   )
 
 add_subdirectory(MCParser)

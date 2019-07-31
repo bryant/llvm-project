@@ -25,6 +25,20 @@ add_llvm_target(XCoreCodeGen
   XCoreTargetObjectFile.cpp
   XCoreSelectionDAGInfo.cpp
   XCoreFrameToArgsOffsetElim.cpp
+
+  LINK_COMPONENTS
+
+  Analysis
+  AsmPrinter
+  CodeGen
+  Core
+  MC
+  SelectionDAG
+  Support
+  Target
+  TransformUtils
+  XCoreDesc
+  XCoreInfo
   )
 
 add_subdirectory(Disassembler)

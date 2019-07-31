@@ -129,6 +129,13 @@ add_llvm_library(LLVMDebugInfoPDB
 
   ADDITIONAL_HEADER_DIRS
   ${LIBPDB_ADDITIONAL_HEADER_DIRS}
+
+  LINK_COMPONENTS
+
+  DebugInfoCodeView
+  DebugInfoMSF
+  Object
+  Support
   )
 
 target_link_libraries(LLVMDebugInfoPDB INTERFACE "${LIBPDB_ADDITIONAL_LIBRARIES}")

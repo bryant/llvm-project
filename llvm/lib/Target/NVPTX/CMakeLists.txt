@@ -35,7 +35,25 @@ set(NVPTXCodeGen_sources
   NVPTXProxyRegErasure.cpp
   )
 
-add_llvm_target(NVPTXCodeGen ${NVPTXCodeGen_sources})
+add_llvm_target(NVPTXCodeGen ${NVPTXCodeGen_sources}
+
+  LINK_COMPONENTS
+
+  Analysis
+  AsmPrinter
+  CodeGen
+  Core
+  MC
+  NVPTXDesc
+  NVPTXInfo
+  ScalarOpts
+  SelectionDAG
+  Support
+  Target
+  TransformUtils
+  Vectorize
+  ipo
+  )
 
 add_subdirectory(MCTargetDesc)
 add_subdirectory(TargetInfo)

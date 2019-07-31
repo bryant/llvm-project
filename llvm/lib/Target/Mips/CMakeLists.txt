@@ -56,6 +56,20 @@ add_llvm_target(MipsCodeGen
   MipsTargetMachine.cpp
   MipsTargetObjectFile.cpp
   MicroMipsSizeReduction.cpp
+
+  LINK_COMPONENTS
+
+  Analysis
+  AsmPrinter
+  CodeGen
+  Core
+  GlobalISel
+  MC
+  MipsDesc
+  MipsInfo
+  SelectionDAG
+  Support
+  Target
   )
 
 add_subdirectory(AsmParser)

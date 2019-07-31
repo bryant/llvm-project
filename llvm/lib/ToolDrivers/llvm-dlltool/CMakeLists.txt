@@ -4,6 +4,12 @@ add_public_tablegen_target(DllOptionsTableGen)
 
 add_llvm_library(LLVMDlltoolDriver
   DlltoolDriver.cpp
+
+  LINK_COMPONENTS
+
+  Object
+  Option
+  Support
   )
 
 add_dependencies(LLVMDlltoolDriver DllOptionsTableGen)

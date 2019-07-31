@@ -42,4 +42,9 @@ add_llvm_library(LLVMDebugInfoCodeView
 
   ADDITIONAL_HEADER_DIRS
   ${LLVM_MAIN_INCLUDE_DIR}/llvm/DebugInfo/CodeView
+
+  LINK_COMPONENTS
+
+  DebugInfoMSF
+  Support
   )

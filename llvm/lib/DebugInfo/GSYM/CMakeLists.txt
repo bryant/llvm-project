@@ -6,4 +6,8 @@ add_llvm_library(LLVMDebugInfoGSYM
   ADDITIONAL_HEADER_DIRS
   ${LLVM_MAIN_INCLUDE_DIR}/llvm/DebugInfo/GSYM
   ${LLVM_MAIN_INCLUDE_DIR}/llvm/DebugInfo
+
+  LINK_COMPONENTS
+
+  Support
   )

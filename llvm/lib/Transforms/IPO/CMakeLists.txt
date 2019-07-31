@@ -43,4 +43,22 @@ add_llvm_library(LLVMipo
 
   DEPENDS
   intrinsics_gen
+
+  LINK_COMPONENTS
+
+  AggressiveInstCombine
+  Analysis
+  BitReader
+  BitWriter
+  Core
+  IRReader
+  InstCombine
+  Instrumentation
+  Linker
+  Object
+  ProfileData
+  ScalarOpts
+  Support
+  TransformUtils
+  Vectorize
   )

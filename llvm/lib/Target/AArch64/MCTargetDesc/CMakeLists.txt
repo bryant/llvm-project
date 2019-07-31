@@ -11,6 +11,13 @@ add_llvm_library(LLVMAArch64Desc
   AArch64TargetStreamer.cpp
   AArch64WinCOFFObjectWriter.cpp
   AArch64WinCOFFStreamer.cpp
+
+  LINK_COMPONENTS
+
+  AArch64Info
+  AArch64Utils
+  MC
+  Support
 )
 add_dependencies(LLVMAArch64Desc AArch64CommonTableGen)
 

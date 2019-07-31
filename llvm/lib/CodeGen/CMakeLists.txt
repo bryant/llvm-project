@@ -173,6 +173,19 @@ add_llvm_library(LLVMCodeGen
 
   DEPENDS
   intrinsics_gen
+
+  LINK_COMPONENTS
+
+  Analysis
+  BitReader
+  BitWriter
+  Core
+  MC
+  ProfileData
+  ScalarOpts
+  Support
+  Target
+  TransformUtils
   )
 
 add_subdirectory(SelectionDAG)

@@ -9,4 +9,10 @@ add_llvm_library(LLVMJITLink
 
   DEPENDS
   intrinsics_gen
+
+  LINK_COMPONENTS
+
+  BinaryFormat
+  Object
+  Support
   )

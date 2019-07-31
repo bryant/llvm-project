@@ -6,4 +6,8 @@ add_llvm_library(LLVMDemangle
 
   ADDITIONAL_HEADER_DIRS
   "${LLVM_MAIN_INCLUDE_DIR}/llvm/Demangle"
+
+  LINK_COMPONENTS
+
+  # No component dependencies.
 )

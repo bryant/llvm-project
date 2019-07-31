@@ -36,6 +36,20 @@ add_llvm_target(SystemZCodeGen
   SystemZTargetMachine.cpp
   SystemZTargetTransformInfo.cpp
   SystemZTDC.cpp
+
+  LINK_COMPONENTS
+
+  Analysis
+  AsmPrinter
+  CodeGen
+  Core
+  MC
+  ScalarOpts
+  SelectionDAG
+  Support
+  SystemZDesc
+  SystemZInfo
+  Target
   )
 
 add_subdirectory(AsmParser)

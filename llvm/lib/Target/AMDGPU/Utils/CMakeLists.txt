@@ -3,4 +3,11 @@ add_llvm_library(LLVMAMDGPUUtils
   AMDKernelCodeTUtils.cpp
   AMDGPUAsmUtils.cpp
   AMDGPUPALMetadata.cpp
+
+  LINK_COMPONENTS
+
+  BinaryFormat
+  Core
+  MC
+  Support
   )

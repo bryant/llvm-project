@@ -189,6 +189,10 @@ add_llvm_library(LLVMSupport
   ${LLVM_MAIN_INCLUDE_DIR}/llvm/Support
   ${Backtrace_INCLUDE_DIRS}
   LINK_LIBS ${system_libs} ${delayload_flags} ${Z3_LINK_FILES}
+
+  LINK_COMPONENTS
+
+  Demangle
   )
 
 set_property(TARGET LLVMSupport PROPERTY LLVM_SYSTEM_LIBS "${system_libs}")

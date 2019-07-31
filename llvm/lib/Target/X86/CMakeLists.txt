@@ -70,7 +70,24 @@ set(sources
   X86WinEHState.cpp
   )
 
-add_llvm_target(X86CodeGen ${sources})
+add_llvm_target(X86CodeGen ${sources}
+
+  LINK_COMPONENTS
+
+  Analysis
+  AsmPrinter
+  CodeGen
+  Core
+  GlobalISel
+  MC
+  ProfileData
+  SelectionDAG
+  Support
+  Target
+  X86Desc
+  X86Info
+  X86Utils
+  )
 
 add_subdirectory(AsmParser)
 add_subdirectory(Disassembler)

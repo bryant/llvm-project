@@ -27,4 +27,19 @@ add_llvm_library(LLVMAsmPrinter
 
   DEPENDS
   intrinsics_gen
+
+  LINK_COMPONENTS
+
+  Analysis
+  BinaryFormat
+  CodeGen
+  Core
+  DebugInfoCodeView
+  DebugInfoDWARF
+  DebugInfoMSF
+  MC
+  MCParser
+  Remarks
+  Support
+  Target
   )

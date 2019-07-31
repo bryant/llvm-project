@@ -13,6 +13,10 @@ add_llvm_library(LLVMWindowsManifest
   ${Backtrace_INCLUDE_DIRS}
 
   LINK_LIBS ${system_libs}
+
+  LINK_COMPONENTS
+
+  Support
   )
 
 set_property(TARGET LLVMWindowsManifest PROPERTY LLVM_SYSTEM_LIBS "${system_libs}")

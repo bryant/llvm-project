@@ -14,4 +14,10 @@ add_llvm_library(LLVMObjectYAML
   WasmYAML.cpp
   XCOFFYAML.cpp
   YAML.cpp
+
+  LINK_COMPONENTS
+
+  DebugInfoCodeView
+  Object
+  Support
   )

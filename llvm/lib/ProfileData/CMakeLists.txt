@@ -13,6 +13,11 @@ add_llvm_library(LLVMProfileData
 
   DEPENDS
   intrinsics_gen
+
+  LINK_COMPONENTS
+
+  Core
+  Support
   )
 
 add_subdirectory(Coverage)

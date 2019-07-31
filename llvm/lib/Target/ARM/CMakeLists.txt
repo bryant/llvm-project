@@ -58,6 +58,23 @@ add_llvm_target(ARMCodeGen
   Thumb2ITBlockPass.cpp
   Thumb2InstrInfo.cpp
   Thumb2SizeReduction.cpp
+
+  LINK_COMPONENTS
+
+  ARMDesc
+  ARMInfo
+  ARMUtils
+  Analysis
+  AsmPrinter
+  CodeGen
+  Core
+  GlobalISel
+  MC
+  ScalarOpts
+  SelectionDAG
+  Support
+  Target
+  TransformUtils
   )
 
 add_subdirectory(AsmParser)

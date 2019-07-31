@@ -5,4 +5,12 @@ add_llvm_library(LLVMSymbolize
 
   ADDITIONAL_HEADER_DIRS
   ${LLVM_MAIN_INCLUDE_DIR}/llvm/DebugInfo/Symbolize
+
+  LINK_COMPONENTS
+
+  DebugInfoDWARF
+  DebugInfoPDB
+  Demangle
+  Object
+  Support
   )

@@ -100,4 +100,12 @@ add_llvm_library(LLVMAnalysis
 
   DEPENDS
   intrinsics_gen
+
+  LINK_COMPONENTS
+
+  BinaryFormat
+  Core
+  Object
+  ProfileData
+  Support
   )

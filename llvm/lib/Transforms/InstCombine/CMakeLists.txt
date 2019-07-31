@@ -24,4 +24,11 @@ add_llvm_library(LLVMInstCombine
 
   DEPENDS
   intrinsics_gen
+
+  LINK_COMPONENTS
+
+  Analysis
+  Core
+  Support
+  TransformUtils
   )

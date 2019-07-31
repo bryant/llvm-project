@@ -121,6 +121,27 @@ add_llvm_target(AMDGPUCodeGen
   GCNNSAReassign.cpp
   GCNDPPCombine.cpp
   SIModeRegister.cpp
+
+  LINK_COMPONENTS
+
+  AMDGPUDesc
+  AMDGPUInfo
+  AMDGPUUtils
+  Analysis
+  AsmPrinter
+  BinaryFormat
+  CodeGen
+  Core
+  GlobalISel
+  MC
+  MIRParser
+  ScalarOpts
+  SelectionDAG
+  Support
+  Target
+  TransformUtils
+  Vectorize
+  ipo
   )
 
 add_subdirectory(AsmParser)

@@ -28,6 +28,20 @@ add_llvm_target(RISCVCodeGen
   RISCVTargetMachine.cpp
   RISCVTargetObjectFile.cpp
   RISCVTargetTransformInfo.cpp
+
+  LINK_COMPONENTS
+
+  Analysis
+  AsmPrinter
+  CodeGen
+  Core
+  MC
+  RISCVDesc
+  RISCVInfo
+  RISCVUtils
+  SelectionDAG
+  Support
+  Target
   )
 
 add_subdirectory(AsmParser)

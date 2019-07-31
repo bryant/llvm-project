@@ -8,4 +8,13 @@ add_llvm_library(LLVMCoroutines
 
   DEPENDS
   intrinsics_gen
+
+  LINK_COMPONENTS
+
+  Analysis
+  Core
+  ScalarOpts
+  Support
+  TransformUtils
+  ipo
   )

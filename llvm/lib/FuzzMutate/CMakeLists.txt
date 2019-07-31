@@ -10,4 +10,14 @@ add_llvm_library(LLVMFuzzMutate
 
   DEPENDS
   intrinsics_gen
+
+  LINK_COMPONENTS
+
+  Analysis
+  BitReader
+  BitWriter
+  Core
+  ScalarOpts
+  Support
+  Target
   )

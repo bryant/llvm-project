@@ -4,4 +4,10 @@ add_llvm_library(LLVMBPFDesc
   BPFInstPrinter.cpp
   BPFMCCodeEmitter.cpp
   BPFELFObjectWriter.cpp
+
+  LINK_COMPONENTS
+
+  BPFInfo
+  MC
+  Support
   )

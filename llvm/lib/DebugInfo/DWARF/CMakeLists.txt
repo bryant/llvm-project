@@ -30,4 +30,11 @@ add_llvm_library(LLVMDebugInfoDWARF
   ADDITIONAL_HEADER_DIRS
   ${LLVM_MAIN_INCLUDE_DIR}/llvm/DebugInfo/DWARF
   ${LLVM_MAIN_INCLUDE_DIR}/llvm/DebugInfo
+
+  LINK_COMPONENTS
+
+  BinaryFormat
+  MC
+  Object
+  Support
   )

@@ -28,6 +28,18 @@ add_llvm_target(BPFCodeGen
   BPFMIChecking.cpp
   BPFMISimplifyPatchable.cpp
   BTFDebug.cpp
+
+  LINK_COMPONENTS
+
+  AsmPrinter
+  BPFDesc
+  BPFInfo
+  CodeGen
+  Core
+  MC
+  SelectionDAG
+  Support
+  Target
   )
 
 add_subdirectory(AsmParser)

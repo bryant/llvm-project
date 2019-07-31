@@ -11,4 +11,9 @@ add_llvm_library(LLVMTextAPI
 
   ADDITIONAL_HEADER_DIRS
   "${LLVM_MAIN_INCLUDE_DIR}/llvm/TextAPI"
+
+  LINK_COMPONENTS
+
+  BinaryFormat
+  Support
 )

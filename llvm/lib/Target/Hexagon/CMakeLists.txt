@@ -67,6 +67,23 @@ add_llvm_target(HexagonCodeGen
   RDFGraph.cpp
   RDFLiveness.cpp
   RDFRegisters.cpp
+
+  LINK_COMPONENTS
+
+  Analysis
+  AsmPrinter
+  CodeGen
+  Core
+  HexagonAsmParser
+  HexagonDesc
+  HexagonInfo
+  MC
+  ScalarOpts
+  SelectionDAG
+  Support
+  Target
+  TransformUtils
+  ipo
 )
 
 add_subdirectory(AsmParser)

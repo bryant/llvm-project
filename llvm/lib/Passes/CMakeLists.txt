@@ -12,4 +12,19 @@ add_llvm_library(LLVMPasses
 
   DEPENDS
   intrinsics_gen
+
+  LINK_COMPONENTS
+
+  AggressiveInstCombine
+  Analysis
+  CodeGen
+  Core
+  InstCombine
+  Instrumentation
+  ScalarOpts
+  Support
+  Target
+  TransformUtils
+  Vectorize
+  ipo
   )

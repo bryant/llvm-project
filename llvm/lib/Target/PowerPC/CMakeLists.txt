@@ -48,6 +48,21 @@ add_llvm_target(PowerPCCodeGen
   PPCVSXSwapRemoval.cpp
   PPCExpandISEL.cpp
   PPCPreEmitPeephole.cpp
+
+  LINK_COMPONENTS
+
+  Analysis
+  AsmPrinter
+  CodeGen
+  Core
+  MC
+  PowerPCDesc
+  PowerPCInfo
+  ScalarOpts
+  SelectionDAG
+  Support
+  Target
+  TransformUtils
   )
 
 add_subdirectory(AsmParser)

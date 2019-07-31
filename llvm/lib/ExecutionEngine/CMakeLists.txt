@@ -12,6 +12,15 @@ add_llvm_library(LLVMExecutionEngine
 
   DEPENDS
   intrinsics_gen
+
+  LINK_COMPONENTS
+
+  Core
+  MC
+  Object
+  RuntimeDyld
+  Support
+  Target
   )
 
 if(BUILD_SHARED_LIBS)

@@ -14,4 +14,25 @@ add_llvm_library(LLVMLTO
   DEPENDS
   intrinsics_gen
   llvm_vcsrevision_h
+
+  LINK_COMPONENTS
+
+  AggressiveInstCombine
+  Analysis
+  BitReader
+  BitWriter
+  CodeGen
+  Core
+  InstCombine
+  Linker
+  MC
+  ObjCARCOpts
+  Object
+  Passes
+  Remarks
+  ScalarOpts
+  Support
+  Target
+  TransformUtils
+  ipo
 )
