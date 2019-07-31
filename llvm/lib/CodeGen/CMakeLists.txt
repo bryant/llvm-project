@@ -1,16 +1,3 @@
-set(LLVM_LINK_COMPONENTS
-  Analysis
-  BitReader
-  BitWriter
-  Core
-  MC
-  ProfileData
-  ScalarOpts
-  Support
-  Target
-  TransformUtils
-  )
-
 add_llvm_library(LLVMCodeGen
   AggressiveAntiDepBreaker.cpp
   AllocationOrder.cpp

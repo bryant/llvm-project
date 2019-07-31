@@ -1,8 +1,3 @@
-set(LLVM_LINK_COMPONENTS
-  Core
-  Support
-  )
-
 add_llvm_library(LLVMProfileData
   GCOV.cpp
   InstrProf.cpp

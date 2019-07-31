@@ -1,24 +1,3 @@
-set(LLVM_LINK_COMPONENTS
-  AggressiveInstCombine
-  Analysis
-  BitReader
-  BitWriter
-  CodeGen
-  Core
-  IPO
-  InstCombine
-  Linker
-  MC
-  ObjCARCOpts
-  Object
-  Passes
-  Remarks
-  ScalarOpts
-  Support
-  Target
-  TransformUtils
-  )
-
 add_llvm_library(LLVMLTO
   Caching.cpp
   LTO.cpp

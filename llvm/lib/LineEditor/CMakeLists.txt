@@ -1,7 +1,3 @@
-set(LLVM_LINK_COMPONENTS
-  Support
-  )
-
 if(HAVE_LIBEDIT)
   set(link_libs edit)
 endif()

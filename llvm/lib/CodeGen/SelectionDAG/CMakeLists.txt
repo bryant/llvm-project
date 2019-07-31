@@ -1,13 +1,3 @@
-set(LLVM_LINK_COMPONENTS
-  Analysis
-  CodeGen
-  Core
-  MC
-  Support
-  Target
-  TransformUtils
-  )
-
 add_llvm_library(LLVMSelectionDAG
   DAGCombiner.cpp
   FastISel.cpp

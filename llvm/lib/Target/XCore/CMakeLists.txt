@@ -1,17 +1,3 @@
-set(LLVM_LINK_COMPONENTS
-  Analysis
-  AsmPrinter
-  CodeGen
-  Core
-  MC
-  SelectionDAG
-  Support
-  Target
-  TransformUtils
-  XCoreDesc
-  XCoreInfo
-  )
-
 set(LLVM_TARGET_DEFINITIONS XCore.td)
 
 tablegen(LLVM XCoreGenAsmWriter.inc -gen-asm-writer)

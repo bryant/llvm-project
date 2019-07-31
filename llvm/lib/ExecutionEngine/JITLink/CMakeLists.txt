@@ -1,9 +1,3 @@
-set(LLVM_LINK_COMPONENTS
-  BinaryFormat
-  Object
-  Support
-  )
-
 add_llvm_library(LLVMJITLink
   JITLink.cpp
   JITLinkGeneric.cpp

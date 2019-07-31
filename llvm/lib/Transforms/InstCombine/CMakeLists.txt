@@ -1,10 +1,3 @@
-set(LLVM_LINK_COMPONENTS
-  Analysis
-  Core
-  Support
-  TransformUtils
-  )
-
 set(LLVM_TARGET_DEFINITIONS InstCombineTables.td)
 tablegen(LLVM InstCombineTables.inc -gen-searchable-tables)
 add_public_tablegen_target(InstCombineTableGen)

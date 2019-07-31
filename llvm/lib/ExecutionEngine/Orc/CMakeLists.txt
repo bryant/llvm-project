@@ -1,15 +1,3 @@
-set(LLVM_LINK_COMPONENTS
-  Core
-  ExecutionEngine
-  JITLink
-  MC
-  Object
-  RuntimeDyld
-  Support
-  Target
-  TransformUtils
-  )
-
 add_llvm_library(LLVMOrcJIT
   CompileOnDemandLayer.cpp
   CompileUtils.cpp

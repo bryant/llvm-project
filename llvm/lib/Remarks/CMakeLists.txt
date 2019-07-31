@@ -1,7 +1,3 @@
-set(LLVM_LINK_COMPONENTS
-  Support
-  )
-
 add_llvm_library(LLVMRemarks
   Remark.cpp
   RemarkFormat.cpp

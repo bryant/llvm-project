@@ -1,10 +1,3 @@
-set(LLVM_LINK_COMPONENTS
-  DebugInfoCodeView
-  DebugInfoMSF
-  Object
-  Support
-  )
-
 macro(add_pdb_impl_folder group)
   list(APPEND PDB_IMPL_SOURCES ${ARGN})
   source_group(${group} FILES ${ARGN})

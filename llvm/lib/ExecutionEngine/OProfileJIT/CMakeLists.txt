@@ -1,10 +1,3 @@
-set(LLVM_LINK_COMPONENTS
-  DebugInfoDWARF
-  ExecutionEngine
-  Object
-  Support
-  )
-
 
 include_directories( ${LLVM_OPROFILE_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/.. )
 

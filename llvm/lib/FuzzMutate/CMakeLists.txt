@@ -1,13 +1,3 @@
-set(LLVM_LINK_COMPONENTS
-  Analysis
-  BitReader
-  BitWriter
-  Core
-  ScalarOpts
-  Support
-  Target
-  )
-
 add_llvm_library(LLVMFuzzMutate
   FuzzerCLI.cpp
   IRMutator.cpp

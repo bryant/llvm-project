@@ -1,20 +1,3 @@
-set(LLVM_LINK_COMPONENTS
-  Analysis
-  AsmPrinter
-  CodeGen
-  Core
-  IPO
-  MC
-  NVPTXDesc
-  NVPTXInfo
-  ScalarOpts
-  SelectionDAG
-  Support
-  Target
-  TransformUtils
-  Vectorize
-  )
-
 set(LLVM_TARGET_DEFINITIONS NVPTX.td)
 
 tablegen(LLVM NVPTXGenAsmWriter.inc -gen-asm-writer)

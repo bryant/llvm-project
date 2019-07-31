@@ -1,6 +1,3 @@
-set(LLVM_LINK_COMPONENTS
-  )
-
 list(APPEND LLVM_COMMON_DEPENDS intrinsics_gen)
 
 list(APPEND LLVM_TABLEGEN_FLAGS -I ${LLVM_MAIN_SRC_DIR}/lib/Target)

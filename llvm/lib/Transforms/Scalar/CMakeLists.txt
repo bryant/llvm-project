@@ -1,12 +1,3 @@
-set(LLVM_LINK_COMPONENTS
-  AggressiveInstCombine
-  Analysis
-  Core
-  InstCombine
-  Support
-  TransformUtils
-  )
-
 add_llvm_library(LLVMScalarOpts
   ADCE.cpp
   AlignmentFromAssumptions.cpp

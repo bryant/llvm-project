@@ -1,11 +1,3 @@
-set(LLVM_LINK_COMPONENTS
-  ARMInfo
-  ARMUtils
-  MC
-  MCDisassembler
-  Support
-  )
-
 add_llvm_library(LLVMARMDesc
   ARMAsmBackend.cpp
   ARMELFObjectWriter.cpp

@@ -1,18 +1,3 @@
-set(LLVM_LINK_COMPONENTS
-  Analysis
-  AsmPrinter
-  CodeGen
-  Core
-  MC
-  PowerPCDesc
-  PowerPCInfo
-  ScalarOpts
-  SelectionDAG
-  Support
-  Target
-  TransformUtils
-  )
-
 set(LLVM_TARGET_DEFINITIONS PPC.td)
 
 tablegen(LLVM PPCGenAsmMatcher.inc -gen-asm-matcher)

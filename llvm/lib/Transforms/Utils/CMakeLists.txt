@@ -1,9 +1,3 @@
-set(LLVM_LINK_COMPONENTS
-  Analysis
-  Core
-  Support
-  )
-
 add_llvm_library(LLVMTransformUtils
   ASanStackFrameLayout.cpp
   AddDiscriminators.cpp

@@ -1,11 +1,3 @@
-set(LLVM_LINK_COMPONENTS
-  DebugInfoDWARF
-  DebugInfoPDB
-  Demangle
-  Object
-  Support
-  )
-
 add_llvm_library(LLVMSymbolize
   DIPrinter.cpp
   SymbolizableObjectFile.cpp

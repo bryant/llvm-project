@@ -1,9 +1,3 @@
-set(LLVM_LINK_COMPONENTS
-  MC
-  Object
-  Support
-  )
-
 add_llvm_library(LLVMRuntimeDyld
   JITSymbol.cpp
   RTDyldMemoryManager.cpp

@@ -1,14 +1,3 @@
-set(LLVM_LINK_COMPONENTS
-  Analysis
-  CodeGen
-  Core
-  MC
-  SelectionDAG
-  Support
-  Target
-  TransformUtils
-  )
-
 add_llvm_library(LLVMGlobalISel
         CSEInfo.cpp
         CSEMIRBuilder.cpp

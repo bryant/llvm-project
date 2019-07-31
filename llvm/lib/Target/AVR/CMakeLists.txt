@@ -1,15 +1,3 @@
-set(LLVM_LINK_COMPONENTS
-  AVRDesc
-  AVRInfo
-  AsmPrinter
-  CodeGen
-  Core
-  MC
-  SelectionDAG
-  Support
-  Target
-  )
-
 set(LLVM_TARGET_DEFINITIONS AVR.td)
 
 tablegen(LLVM AVRGenAsmMatcher.inc -gen-asm-matcher)

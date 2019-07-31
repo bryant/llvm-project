@@ -1,10 +1,3 @@
-set(LLVM_LINK_COMPONENTS
-  BinaryFormat
-  MC
-  Object
-  Support
-  )
-
 add_llvm_library(LLVMDebugInfoDWARF
   DWARFAbbreviationDeclaration.cpp
   DWARFAddressRange.cpp

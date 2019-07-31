@@ -1,9 +1,3 @@
-set(LLVM_LINK_COMPONENTS
-  BinaryFormat
-  DebugInfoCodeView
-  Support
-  )
-
 add_llvm_library(LLVMMC
   ConstantPools.cpp
   ELFObjectWriter.cpp

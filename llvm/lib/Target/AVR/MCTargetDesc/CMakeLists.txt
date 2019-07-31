@@ -1,9 +1,3 @@
-set(LLVM_LINK_COMPONENTS
-  AVRInfo
-  MC
-  Support
-  )
-
 add_llvm_library(LLVMAVRDesc
   AVRAsmBackend.cpp
   AVRELFObjectWriter.cpp

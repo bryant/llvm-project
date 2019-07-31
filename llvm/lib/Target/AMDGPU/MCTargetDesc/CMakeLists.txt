@@ -1,12 +1,3 @@
-set(LLVM_LINK_COMPONENTS
-  AMDGPUInfo
-  AMDGPUUtils
-  BinaryFormat
-  Core
-  MC
-  Support
-  )
-
 add_llvm_library(LLVMAMDGPUDesc
   AMDGPUAsmBackend.cpp
   AMDGPUELFObjectWriter.cpp

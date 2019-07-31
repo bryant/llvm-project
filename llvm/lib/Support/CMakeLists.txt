@@ -1,7 +1,3 @@
-set(LLVM_LINK_COMPONENTS
-  Demangle
-  )
-
 set(system_libs)
 if ( LLVM_ENABLE_ZLIB AND HAVE_LIBZ )
   set(system_libs ${system_libs} ${ZLIB_LIBRARIES})

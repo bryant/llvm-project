@@ -1,12 +1,3 @@
-set(LLVM_LINK_COMPONENTS
-  BinaryFormat
-  BitReader
-  Core
-  MC
-  MCParser
-  Support
-  )
-
 add_llvm_library(LLVMObject
   Archive.cpp
   ArchiveWriter.cpp

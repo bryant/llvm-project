@@ -1,24 +1,3 @@
-set(LLVM_LINK_COMPONENTS
-  AMDGPUDesc
-  AMDGPUInfo
-  AMDGPUUtils
-  Analysis
-  AsmPrinter
-  BinaryFormat
-  CodeGen
-  Core
-  GlobalISel
-  IPO
-  MC
-  MIRParser
-  ScalarOpts
-  SelectionDAG
-  Support
-  Target
-  TransformUtils
-  Vectorize
-  )
-
 set(LLVM_TARGET_DEFINITIONS AMDGPU.td)
 
 tablegen(LLVM AMDGPUGenAsmMatcher.inc -gen-asm-matcher)

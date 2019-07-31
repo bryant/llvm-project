@@ -1,9 +1,3 @@
-set(LLVM_LINK_COMPONENTS
-  BinaryFormat
-  Core
-  Support
-  )
-
 # AsmParser
 add_llvm_library(LLVMAsmParser
   LLLexer.cpp

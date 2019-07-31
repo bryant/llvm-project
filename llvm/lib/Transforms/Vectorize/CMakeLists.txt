@@ -1,10 +1,3 @@
-set(LLVM_LINK_COMPONENTS
-  Analysis
-  Core
-  Support
-  TransformUtils
-  )
-
 add_llvm_library(LLVMVectorize
   LoadStoreVectorizer.cpp
   LoopVectorizationLegality.cpp

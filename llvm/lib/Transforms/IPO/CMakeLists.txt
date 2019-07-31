@@ -1,21 +1,3 @@
-set(LLVM_LINK_COMPONENTS
-  AggressiveInstCombine
-  Analysis
-  BitReader
-  BitWriter
-  Core
-  IRReader
-  InstCombine
-  Instrumentation
-  Linker
-  Object
-  ProfileData
-  ScalarOpts
-  Support
-  TransformUtils
-  Vectorize
-  )
-
 add_llvm_library(LLVMipo
   AlwaysInliner.cpp
   ArgumentPromotion.cpp

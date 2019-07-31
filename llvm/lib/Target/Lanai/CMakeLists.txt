@@ -1,18 +1,3 @@
-set(LLVM_LINK_COMPONENTS
-  Analysis
-  AsmPrinter
-  CodeGen
-  Core
-  LanaiAsmParser
-  LanaiDesc
-  LanaiInfo
-  MC
-  SelectionDAG
-  Support
-  Target
-  TransformUtils
-  )
-
 set(LLVM_TARGET_DEFINITIONS Lanai.td)
 
 tablegen(LLVM LanaiGenAsmMatcher.inc -gen-asm-matcher)

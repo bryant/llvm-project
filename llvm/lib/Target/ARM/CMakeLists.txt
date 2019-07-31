@@ -1,20 +1,3 @@
-set(LLVM_LINK_COMPONENTS
-  ARMDesc
-  ARMInfo
-  ARMUtils
-  Analysis
-  AsmPrinter
-  CodeGen
-  Core
-  GlobalISel
-  MC
-  ScalarOpts
-  SelectionDAG
-  Support
-  Target
-  TransformUtils
-  )
-
 set(LLVM_TARGET_DEFINITIONS ARM.td)
 
 tablegen(LLVM ARMGenAsmMatcher.inc -gen-asm-matcher)

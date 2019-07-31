@@ -1,17 +1,3 @@
-set(LLVM_LINK_COMPONENTS
-  Analysis
-  AsmPrinter
-  CodeGen
-  Core
-  MC
-  RISCVDesc
-  RISCVInfo
-  RISCVUtils
-  SelectionDAG
-  Support
-  Target
-  )
-
 set(LLVM_TARGET_DEFINITIONS RISCV.td)
 
 tablegen(LLVM RISCVGenAsmMatcher.inc -gen-asm-matcher)

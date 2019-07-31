@@ -1,18 +1,3 @@
-set(LLVM_LINK_COMPONENTS
-  AggressiveInstCombine
-  Analysis
-  CodeGen
-  Core
-  IPO
-  InstCombine
-  Instrumentation
-  ScalarOpts
-  Support
-  Target
-  TransformUtils
-  Vectorize
-  )
-
 if (MSVC)
   set_source_files_properties(PassBuilder.cpp PROPERTIES COMPILE_FLAGS /bigobj)
 endif()

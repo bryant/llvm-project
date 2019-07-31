@@ -1,15 +1,3 @@
-set(LLVM_LINK_COMPONENTS
-  AsmPrinter
-  CodeGen
-  Core
-  MC
-  SelectionDAG
-  SparcDesc
-  SparcInfo
-  Support
-  Target
-  )
-
 set(LLVM_TARGET_DEFINITIONS Sparc.td)
 
 tablegen(LLVM SparcGenAsmMatcher.inc -gen-asm-matcher)
