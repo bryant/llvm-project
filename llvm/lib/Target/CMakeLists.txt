@@ -14,7 +14,10 @@ add_llvm_library(LLVMTarget
 
   LINK_COMPONENTS
 
-  # No component dependencies.
+  Analysis
+  Core
+  MC
+  Support
   )
 
 foreach(t ${LLVM_TARGETS_TO_BUILD})
