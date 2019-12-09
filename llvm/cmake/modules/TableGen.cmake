@@ -115,6 +115,7 @@ function(add_public_tablegen_target target)
   endif()
   set_target_properties(${target} PROPERTIES FOLDER "Tablegenning")
   set(LLVM_COMMON_DEPENDS ${LLVM_COMMON_DEPENDS} ${target} PARENT_SCOPE)
+  unset(TABLEGEN_OUTPUT)
 endfunction()
 
 macro(add_tablegen target project)
