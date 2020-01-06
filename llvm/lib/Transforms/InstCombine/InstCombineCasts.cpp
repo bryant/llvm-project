@@ -290,12 +290,16 @@ Instruction *InstCombiner::commonCastTransforms(CastInst &CI) {
 
   // If we are casting a PHI, then fold the cast into the PHI.
   if (auto *PN = dyn_cast<PHINode>(Src)) {
-    // Don't do this if it would create a PHI node with an illegal type from a
-    // legal type.
-    if (!Src->getType()->isIntegerTy() || !CI.getType()->isIntegerTy() ||
-        shouldChangeType(CI.getType(), Src->getType()))
-      if (Instruction *NV = foldOpIntoPhi(CI, PN))
-        return NV;
+    // Don't do this if the CI is a z-/sext that is only ever used by an icmp.
+    if (!((CI.getOpcode() == Instruction::ZExt ||
+           CI.getOpcode() == Instruction::SExt) &&
+          CI.hasOneUse() && isa<ICmpInst>(*CI.user_begin())))
+      // Don't do this if it would create a PHI node with an illegal type from a
+      // legal type.
+      if (!Src->getType()->isIntegerTy() || !CI.getType()->isIntegerTy() ||
+          shouldChangeType(CI.getType(), Src->getType()))
+        if (Instruction *NV = foldOpIntoPhi(CI, PN))
+          return NV;
   }
 
   return nullptr;

@@ -3530,18 +3530,14 @@ define i1 @op_phi_icmp_zext(i1 %a, i32 %b, i32 %c, i32 %d) {
 ; CHECK:       bb1:
 ; CHECK-NEXT:    [[B_:%.*]] = add i32 [[B:%.*]], 1
 ; CHECK-NEXT:    [[C_:%.*]] = add i32 [[C:%.*]], 1
-; CHECK-NEXT:    [[PHITMP:%.*]] = zext i32 [[B_]] to i64
-; CHECK-NEXT:    [[PHITMP1:%.*]] = sext i32 [[C_]] to i64
 ; CHECK-NEXT:    br label [[BB3:%.*]]
 ; CHECK:       bb2:
 ; CHECK-NEXT:    br label [[BB3]]
 ; CHECK:       bb3:
-; CHECK-NEXT:    [[ZSRC:%.*]] = phi i64 [ [[PHITMP]], [[BB1]] ], [ 1971560213, [[BB2]] ]
-; CHECK-NEXT:    [[SSRC:%.*]] = phi i64 [ [[PHITMP1]], [[BB1]] ], [ 314159265, [[BB2]] ]
-; CHECK-NEXT:    [[ZEXT_:%.*]] = zext i32 [[D:%.*]] to i64
-; CHECK-NEXT:    [[ZCMP:%.*]] = icmp ult i64 [[ZSRC]], [[ZEXT_]]
-; CHECK-NEXT:    [[SEXT_:%.*]] = sext i32 [[D]] to i64
-; CHECK-NEXT:    [[SCMP:%.*]] = icmp ult i64 [[SSRC]], [[SEXT_]]
+; CHECK-NEXT:    [[ZSRC:%.*]] = phi i32 [ [[B_]], [[BB1]] ], [ 1971560213, [[BB2]] ]
+; CHECK-NEXT:    [[SSRC:%.*]] = phi i32 [ [[C_]], [[BB1]] ], [ 314159265, [[BB2]] ]
+; CHECK-NEXT:    [[ZCMP:%.*]] = icmp ult i32 [[ZSRC]], [[D:%.*]]
+; CHECK-NEXT:    [[SCMP:%.*]] = icmp ult i32 [[SSRC]], [[D]]
 ; CHECK-NEXT:    [[RV:%.*]] = and i1 [[ZCMP]], [[SCMP]]
 ; CHECK-NEXT:    ret i1 [[RV]]
 ;
