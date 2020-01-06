@@ -68,6 +68,7 @@ add_llvm_component_library(LLVMScalarOpts
   SimpleLoopUnswitch.cpp
   SimplifyCFGPass.cpp
   Sink.cpp
+  SparseDSE.cpp
   SpeculativeExecution.cpp
   SpeculateAroundPHIs.cpp
   StraightLineStrengthReduce.cpp

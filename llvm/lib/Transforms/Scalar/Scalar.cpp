@@ -101,6 +101,7 @@ void llvm::initializeScalarOpts(PassRegistry &Registry) {
   initializeSinkingLegacyPassPass(Registry);
   initializeTailCallElimPass(Registry);
   initializeSeparateConstOffsetFromGEPPass(Registry);
+  // initializeSparseDSELegacyPass(Registry);
   initializeSpeculativeExecutionLegacyPassPass(Registry);
   initializeStraightLineStrengthReducePass(Registry);
   initializePlaceBackedgeSafepointsImplPass(Registry);
