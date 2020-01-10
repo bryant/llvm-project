@@ -964,7 +964,7 @@ void SCCPSolver::visitSelectInst(SelectInst &I) {
   // select ?, C, C -> C.
   if (TVal.isConstant() && FVal.isConstant() &&
       TVal.getConstant() == FVal.getConstant())
-    return (void)markConstant(&I, FVal.getConstant());
+    return (void)mergeInValue(&I, FVal);
 
   if (TVal.isUnknown())   // select ?, undef, X -> X.
     return (void)mergeInValue(&I, FVal);

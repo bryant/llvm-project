@@ -6,6 +6,18 @@
 ; Function Attrs: readonly
 define void @hoge() #0 {
 ; CHECK-LABEL: @hoge(
+; CHECK-NEXT:  bb:
+; CHECK-NEXT:    br label [[BB8:%.*]]
+; CHECK:       bb1:
+; CHECK-NEXT:    br i1 true, label [[BB2:%.*]], label [[BB1:%.*]]
+; CHECK:       bb2:
+; CHECK-NEXT:    [[TMP3:%.*]] = load i16, i16 addrspace(1)* bitcast (i32 addrspace(1)* @global to i16 addrspace(1)*), align 2
+; CHECK-NEXT:    [[TMP4:%.*]] = icmp eq i16 [[TMP3]], 0
+; CHECK-NEXT:    [[TMP5:%.*]] = select i1 [[TMP4]], i16 addrspace(1)* bitcast (i32 addrspace(1)* @global to i16 addrspace(1)*), i16 addrspace(1)* bitcast (i32 addrspace(1)* @global to i16 addrspace(1)*)
+; CHECK-NEXT:    br label [[BB8]]
+; CHECK:       bb8:
+; CHECK-NEXT:    br label [[BB1]]
+;
 bb:
   br label %bb8
 
