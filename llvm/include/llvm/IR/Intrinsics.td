@@ -1376,6 +1376,13 @@ def int_preserve_struct_access_index : Intrinsic<[llvm_anyptr_ty],
 //===---------- Intrinsics to query properties of scalable vectors --------===//
 def int_vscale : Intrinsic<[llvm_anyint_ty], [], [IntrNoMem]>;
 
+def int_nvvm_internal_parallel_copy
+  : Intrinsic<[llvm_descriptor_ty], [], [IntrNoMem]>;
+
+def int_nvvm_internal_copy
+  : Intrinsic<[llvm_any_ty], [llvm_descriptor_ty, LLVMMatchType<0>],
+              [Returned<1>, IntrNoMem]>;
+
 //===----------------------------------------------------------------------===//
 
 //===----------------------------------------------------------------------===//

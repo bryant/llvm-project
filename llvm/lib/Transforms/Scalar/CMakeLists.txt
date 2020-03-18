@@ -6,6 +6,7 @@ add_llvm_component_library(LLVMScalarOpts
   ConstantHoisting.cpp
   ConstantProp.cpp
   CorrelatedValuePropagation.cpp
+  CSSA.cpp
   DCE.cpp
   DeadStoreElimination.cpp
   DivRemPairs.cpp
