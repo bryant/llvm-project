@@ -36,15 +36,34 @@ struct MergeSets {
     bool Inconsistent = false;
 
     auto propagateToShadow = [&](const DomTreeNode &P, const DomTreeNode &S) {
+      auto St = Inner.find(S.getBlock());
+      BitVector Update = St->second.second;
+      Update.set(St->second.first);
       const DomTreeNode *L = &P;
       do {
         assert(Inner.count(L->getBlock()) && Inner.count(S.getBlock()) &&
                "Should have initialized Inner with BfsVec.");
-        auto Lt = Inner.find(L->getBlock());
-        auto St = Inner.find(S.getBlock());
-        l.merge |= s.merge | s;
+        // merge(l) |= merge(s) \union s
+        Inner.find(L->getBlock())->second.second |= Update;
         L = L->getIDom();
       } while (L->getIDom() != S.getIDom());
+      Inner.find(L->getBlock())->second.second |= Update;
+      return L;
+    };
+
+    auto checkInconsistency = [&](const DomTreeNode &L) {
+      auto mergeL = getMergeBitVec(*L.getBlock());
+      for (const DomTreeNode &P : jpreds(L.getBlock())) {
+        if (Visited.count({&P, &L})) {
+          // merge(P) should at least contain merge(L), so check ~P & L.
+          auto mergeP = getMergeBitVec(*P.getBlock());
+          mergeP.flip();
+          mergeP &= mergeL;
+          if (mergeP.any())
+            return true;
+        }
+      }
+      return false;
     };
 
     for (unsigned Idx = 0; Idx < BfsVec.size(); Idx += 1) {
