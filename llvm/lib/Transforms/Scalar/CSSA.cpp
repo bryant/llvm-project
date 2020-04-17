@@ -132,6 +132,11 @@ struct CongValue {
     return DFSIn <= Other.DFSIn && Other.DFSOut <= DFSOut;
   }
 
+  // Returns true if this appears before Other in a DPO walk.
+  bool operator<(const CongValue &Other) const {
+    return DFSIn < Other.DFSIn || LocalNum < Other.LocalNum;
+  }
+
   bool operator!=(const CongValue &Other) const { return I != Other.I; }
 
   // Is Def live at N? TODO: If N is unreachable, this could be an issue.
@@ -350,8 +355,7 @@ struct CSSA {
       // inbounds(ia) (but not ib) => a[ia++],
       // inbounds(ib) (but not ia) => b[ib++]
       StackEntry Cur;
-      if ((IA < A.size() && IB < B.size() && A[IA].dom(B[IB])) ||
-          IB >= B.size())
+      if ((IA < A.size() && IB < B.size() && A[IA] < B[IB]) || IB >= B.size())
         Cur = {A[IA++], StackEntry::FromA};
       else
         Cur = {B[IB++], StackEntry::FromB};
@@ -378,8 +382,7 @@ struct CSSA {
     CongClass Merged;
     unsigned IA = 0, IB = 0;
     for (; IA < A.size() || IB < B.size();) {
-      if ((IA < A.size() && IB < B.size() && A[IA].dom(B[IB])) ||
-          IB >= B.size()) {
+      if ((IA < A.size() && IB < B.size() && A[IA] < B[IB]) || IB >= B.size()) {
         Merged.Members.push_back(A[IA++]);
       } else {
         Merged.Members.push_back(B[IB++]);
