@@ -440,13 +440,18 @@ struct CSSA {
     return *this;
   }
 
+  unsigned nextLocalNum(const Instruction &I) {
+    unsigned Ret = LocalCount;
+    // Leave a gap for first non-phi pcopy marker.
+    LocalCount += 2;
+    LocalNum.insert({&I, Ret});
+    return Ret;
+  }
+
   CSSA &localNum() {
     for (const BasicBlock &BB : F)
-      for (const Instruction &I : BB) {
-        LocalNum.insert({&I, LocalCount});
-        // Leave a gap for first non-phi pcopy marker.
-        LocalCount += 2;
-      }
+      for (const Instruction &I : BB)
+        nextLocalNum(I);
     return *this;
   }
 };
