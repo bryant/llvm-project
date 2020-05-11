@@ -304,8 +304,8 @@ struct VirtCoalescer {
   void insertCSSA(Function &F) {
     // Insert all value copies. We need to do this to ensure that virtualized
     // phi vreg classes are fully isolated. If these are not fully isolated,
-    // then it is possible that a) false interferences and/or b) incorrect cong
-    // class members upon merge.
+    // then it is possible that a) false interferences (imagine virtualized
+    // swap-problem) and/or b) incorrect cong class members upon merge.
     for (BasicBlock &BB : F) {
       for (PHINode &PN : BB.phis()) {
         // Create at insert point.
@@ -315,24 +315,6 @@ struct VirtCoalescer {
       }
     }
 
-    // want to be able to traverse like this, to avoid needing to traverse
-    // bbs/phis or do more val-to-cc densemap lookups than we need.
-    //
-    // in agg coalescing, we can iterate over copies in any order we want, and
-    // only once.  proof is to think about coalescing on an igraph. we only
-    // coalesce at affinity edges, and each coalescing grows some iregion a bit
-    // larger.  suppose by contradiction. then some affinity edge q could only
-    // be coalescsed *after* another edge p. but that does not make sense.
-    // result: we can choose to iterate over copies in phi-order so that we
-    // don't have to keep reloading copy source's cong class.
-    //
-    // in that order in mat-coal, the initial phi class will contain a fully
-    // isolated phi, which really means that we will never a merge a phi class
-    // with something else until our iteration reaches that phi first. this is
-    // equivalent to boissinot's "one should never have to test with..." stmt
-    // except we do it right via the initial full value copy insertion. result:
-    // we don't even have to pre-allocate a cc for a phi until iteration reaches
-    // it.
     for (BasicBlock &BB : F)
       for (PHINode &PN : BB.phis())
         coalesceVirtual(PN);
@@ -397,97 +379,7 @@ struct VirtCoalescer {
       rauw(*ValCopy, &DstCC);
       mergeInto(CC, DstCC);
     }
-
-    // At this point: CC has been updated; appropriate copies removed from CC
-    // and IR;
-
-    // Goals:
-    //
-    // - if a copy has been coalesced, we don't want to keep it around in the
-    // dfs vec. this would just slow down interference checks and extra
-    // memory.
-    // - want to do virtualized.
-    //
-    // try mat-coal: build dfsvec of inserted copies, then check each operand
-    // copy's source class, try to merge, if merged then reach in and remove
-    // that copy from dfsvec and also erase inserted copy.
-    //
-    // problems: removal costs another o(n) scan plus memmove/cpy.
-    for (unsigned OpNum = 0; OpNum < PN.getNumIncomingValues(); OpNum += 1) {
-      // flip operand use off, merge operand class with ours, also kill off
-      // this vcopy.
-    }
-
-    for (PHINode &PN : BB.phis()) {
-      // In a non-virtualized setting, PN's vreg class would initially contain
-      // copies + isolated phi and these are guaranteed not to intersect. Then
-      // one-by-one we check if we can coalesce each copy by merging copy
-      // source into class and checking for intersection. Only source of
-      // interference is op-op or op-copy.
-      //
-      // Would virtualization miss any op-copy interferences? Is op-copy
-      // possible?
-      //
-      // Unknown. Not investing more time towards proving this.
-      //
-      // Initializing with virtual copies and having to handle materialization
-      // seems only marginally less expensive and more complex than
-      // materialized coalescing (inserting real copies then coalescing). So
-      // let's go with the latter once more.
-      //
-      // Choices for mat-coal:
-      //
-      // - insert phi-by-phi.
-      // - insert for all phis, block-by-block.
-      //
-      // Looks like we will have to insert all value copies because when
-      // virt-coal we could be testing against another phi cong class that has
-      // not fully materialized yet.
-      //
-      // ;w
-      //
-
-      CongClass &PCC = initializePhiClass(PN);
-      // PCC: {c1, c2, ..., p0}
-      // materialized coalesce: c1 = copy(a1), try {a1, c1, ...}
-      // virt coal: try {a1, c2, ...}. if it works,
-      // so focus on the interference check for operands.
-      // requires a ccdfsvec,
-      //
-      // type CC = Vec Value
-      // type AllCC = DenseMap Value CC
-      //
-      // self_interf :: CC -> Bool
-      // interf1 :: CC -> Value -> Maybe CC
-      // interf :: CC -> CC -> Maybe CC
-      //
-      // get_class :：Value -> CC
-      //
-      // try_coal :: AllCC -> Copy -> AllCC
-      // try_coal ccs (Copy dst src) = case interf (get_class ccs dcc)
-      // (get_class ccs scc) of
-      //     None -> ccs
-      //     Maybe new -> update (update ccs dst new) src new
-
-      for (unsigned Idx = 0; Idx < PN.getNumIncomingValues(); Idx += 1) {
-        coalesceOperandCopy(PCC, PN, Idx);
-      }
-      insertOperandCopy(PN, Idx);
-
-      // Coalesce value copy.
-      assert(PN.hasOneUse() && "Only use of phi should be its value copy.");
-      auto *Copy = cast<IntrinsicInst>(PN.user_begin());
-    }
   }
-
-  void insertOperandCopy(PHINode &PN, unsigned Idx) {
-    // pick out phi class
-    // test if that op Idx interferes with the class.
-    // if so, replace with copy.
-    // if not, add into class.
-  }
-
-  void howThisWorks(PHINode &);
 };
 
 void VirtCoalescer::coalesceVirtual(PHINode &PN, CongClass &PCC) {
