@@ -88,12 +88,18 @@ struct CongValue {
   Instruction *I;
   unsigned DFSIn;
   unsigned DFSOut;
-  unsigned DPONum;
+  unsigned LocalNum;
 
   bool dom(const CongValue &Other) const {
     if (DFSIn == Other.DFSIn)
-      return DPONum <= Other.DPONum;
+      return LocalNum <= Other.LocalNum;
     return DFSIn <= Other.DFSIn && Other.DFSOut <= DFSOut;
+  }
+
+  // Returns true if this comes before Other in DPO. This is used primarily to
+  // maintain cong class members in sorted order.
+  bool dpoBefore(const CongValue &Other) const {
+    return DFSIn < Other.DFSIn || LocalNum < Other.LocalNum;
   }
 };
 
@@ -130,13 +136,14 @@ struct CSSA {
 
   std::forward_list<CongClass> Classes;
   DenseMap<const Instruction *, CongClass *> ToClass;
-  DenseMap<const Instruction *, unsigned> DPONum;
+  DenseMap<const Instruction *, unsigned> LocalNum;
+  unsigned LocalCount = 0;
 
   CSSA(Function &F, const MergeSets &MS) : F(F), DT(MS.getDomTree()), MS(MS) {}
 
   CongValue fromInst(Instruction *I) {
     const DomTreeNode &N = *DT.getNode(I->getParent());
-    return {I, N.getDFSNumIn(), N.getDFSNumOut(), DPONum.find(I)->second};
+    return {I, N.getDFSNumIn(), N.getDFSNumOut(), LocalNum.find(I)->second};
   }
 
   // Is Def live at N? TODO: If N is unreachable, this could be an issue.
@@ -165,7 +172,7 @@ struct CSSA {
         // contradiction).
         auto *I = cast<Instruction>(U);
         return I->getParent() != NI->getParent() ||
-               N.DPONum < DPONum.find(I)->second;
+               N.LocalNum < LocalNum.find(I)->second;
       });
 
     const DomTreeNode *DB = DT.getNode(DI->getParent());
@@ -232,8 +239,7 @@ struct CSSA {
       // inbounds(ia) (but not ib) => a[ia++],
       // inbounds(ib) (but not ia) => b[ib++]
       StackEntry Cur;
-      // TODO: Bug: Again DPO not dom.
-      if ((IA < A.size() && IB < B.size() && A[IA].dom(B[IB])) ||
+      if ((IA < A.size() && IB < B.size() && A[IA].dpoBefore(B[IB])) ||
           IB >= B.size())
         Cur = {A[IA++], StackEntry::FromA};
       else
@@ -261,8 +267,7 @@ struct CSSA {
     CongClass Merged;
     unsigned IA = 0, IB = 0;
     for (; IA < A.size() || IB < B.size();) {
-      // TODO: Bug: Again DPO not dom.
-      if ((IA < A.size() && IB < B.size() && A[IA].dom(B[IB])) ||
+      if ((IA < A.size() && IB < B.size() && A[IA].dpoBefore(B[IB])) ||
           IB >= B.size()) {
         Merged.Members.push_back(A[IA++]);
       } else {
@@ -303,8 +308,8 @@ struct CSSA {
         if (!isa<Instruction>(Copies[Idx].getSource()))
           continue;
 
-        // TODO: Optimize for the common case when one of CC or SrcCC are
-        // singleton.
+        // TODO: Enhancement: Optimize for singleton vreg classes, which could
+        // be common.
         CongClass &CC = getCongClass(*Copies[Idx].I);
         CongClass &SrcCC =
             getCongClass(*cast<Instruction>(Copies[Idx].getSource()));
@@ -362,7 +367,7 @@ struct CSSA {
         CongClass &PC = getCongClass(PN);
         assert(PC.size() == 1 && "Assumption: This is called immediately after "
                                  "insertPhiCopies and dpoNum.");
-        PC.Members[0].DPONum = DPONum.find(&PN)->second;
+        PC.Members[0].LocalNum = LocalNum.find(&PN)->second;
 
         assert(PN.hasOneUse() && "Should only be used by a copy.");
         Copies.push_back({cast<IntrinsicInst>(*PN.user_begin())});
@@ -371,10 +376,10 @@ struct CSSA {
              PredNum += 1)
           add(*cast<IntrinsicInst>(PN.getIncomingValue(PredNum)), PC);
 
-        std::sort(
-            PC.Members.begin(), PC.Members.end(),
-            // TODO: Bug: Sort by DPO, not dom.
-            [](const CongValue &A, const CongValue &B) { return A.dom(B); });
+        std::sort(PC.Members.begin(), PC.Members.end(),
+                  [](const CongValue &A, const CongValue &B) {
+                    return A.dpoBefore(B);
+                  });
         LLVM_DEBUG(dbgs() << "Sorted class:" << PC << "\n");
       }
     }
@@ -435,13 +440,13 @@ struct CSSA {
     return *this;
   }
 
-  // TODO: Enhancement: Only local num really needed here.
-  CSSA &dpoNum() {
-    unsigned C = 0;
-    auto *DT_ = const_cast<DominatorTree *>(&DT);
-    for (const DomTreeNode *Node : make_range(df_begin(DT_), df_end(DT_)))
-      for (const Instruction &I : *Node->getBlock())
-        DPONum.insert({&I, C++});
+  CSSA &localNum() {
+    for (const BasicBlock &BB : F)
+      for (const Instruction &I : BB) {
+        LocalNum.insert({&I, LocalCount});
+        // Leave a gap for first non-phi pcopy marker.
+        LocalCount += 2;
+      }
     return *this;
   }
 };
@@ -470,7 +475,7 @@ struct CSSALegacyPass : public FunctionPass {
 #endif
     return CSSA(F, getAnalysis<MergeSetsPass>().getMS())
         .insertCopies()
-        .dpoNum()
+        .localNum()
         .initPhiCongClass()
         .coalesceAllCopies();
   }
