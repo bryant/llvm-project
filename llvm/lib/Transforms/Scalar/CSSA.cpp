@@ -142,6 +142,15 @@ struct CSSA {
   CSSA(Function &F, const MergeSets &MS) : F(F), DT(MS.getDomTree()), MS(MS) {}
 
   CongValue fromInst(Instruction *I) {
+    if (auto *II = dyn_cast<IntrinsicInst>(I))
+      if (II->getIntrinsicID() == Intrinsic::nvvm_internal_copy) {
+        // For parallel copies, DFS and local numbering should come from the
+        // parallel marker.
+        auto *Marker = cast<IntrinsicInst>(I->getOperand(0));
+        const DomTreeNode &N = *DT.getNode(Marker->getParent());
+        return {I, N.getDFSNumIn(), N.getDFSNumOut(),
+                LocalNum.find(Marker)->second};
+      }
     const DomTreeNode &N = *DT.getNode(I->getParent());
     return {I, N.getDFSNumIn(), N.getDFSNumOut(), LocalNum.find(I)->second};
   }
