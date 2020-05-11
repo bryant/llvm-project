@@ -28,6 +28,73 @@
 // each xi into the class. Note that it is guaranteed that at least one of them
 // can work.
 
+/*
+x1 =
+
+x2 = phi(x1, x3)
+x3 = x2 + 1
+
+use(x2)
+use(x1)
+
+
+x1 =
+    x1' = x1
+
+x2 = phi(x1, x3)
+    x2 = x2'
+x3 = x2 + 1
+    x3' = x3
+
+use(x2)
+use(x1)
+
+
+x2' = phi(x1, x3)
+x3 = phi(...)
+    x2 = x2'
+    x3' = x3
+
+use(x2)
+use(x1)
+
+a1 =
+b1 =
+
+a2 = phi(a1, v)
+b2 = phi(b1, u)
+x, y = a2, b2
+u, v = x, y
+
+
+a1 =
+b1 =
+
+a2 = phi(a1, v)
+b2 = phi(b1, x)
+x, y = a2, b2       2, 3 = 1, 2
+v = y               1 = 3
+
+a = phi(a1, y)
+b = phi(b1, z)
+c = phi(c1, x)
+x, y, z = a, b, c   3, 1, 2 = 1, 2, 3
+
+a = phi(a1, y)
+b = phi(b1, z)
+c = phi(c1, x)
+x, rr = a, c        3, 4 = 1, 3
+y, z = b, rr        1, 2 = 2, 4         4=3, 3=1, 1=2, 2=4
+
+a = phi(a1, y)
+b = phi(b1, z)
+c = phi(c1, ss)
+x = a               4 = 1
+y, z, ss = b, c, x  1, 2, 3 = 2, 3, 4   4=1, 1=2, 2=3, 3=4
+
+
+*/
+
 #define DEBUG_TYPE "do-cssa"
 #define PASS_NAME "Insert phi elim copies"
 
@@ -110,11 +177,20 @@ struct LocalNumbering {
   unsigned LocalNumNext = 0;
 
   LocalNumbering(Function &F) {
-    for (const Instruction &I : F)
-      addInst(I);
+    // Leaves an empty numbering slot for phi value copies.
+    for (const BasicBlock &BB : F) {
+      auto It = BB.begin();
+      for (; It != BB.end() && isa<PHINode>(It); ++It)
+        addInst(It);
+      LocalNumNext += 1;
+      for (; It != BB.end(); ++It)
+        addInst(It);
+    }
   }
 
   void addInst(const Instruction &I) { ToNum.insert({&I, LocalNumNext++}); }
+
+  unsigned getNum(const Instruction &I) const { return ToNum.find(&I)->second; }
 };
 
 // Newtype around an instruction that belongs to some interference-free class.
@@ -132,8 +208,8 @@ struct CongValue {
     return DFSIn <= Other.DFSIn && Other.DFSOut <= DFSOut;
   }
 
-  // Returns true if this appears before Other in a DPO walk.
-  bool operator<(const CongValue &Other) const {
+  // Returns true if this comes before Other in DPO.
+  bool dpoBefore(const CongValue &Other) const {
     return DFSIn < Other.DFSIn || LocalNum < Other.LocalNum;
   }
 
@@ -213,16 +289,238 @@ raw_ostream &operator<<(raw_ostream &O, const CongClass &CC) {
 
 struct CongValue, CongClass;
 
-struct PhiSetup;
-
 struct Coalescer {
   std::forward_list<CongClass> Classes;
   DenseMap<const Instruction *, CongClass *> ToClass;
 
   bool canCoalesce(const CongClass &, const CongClass &) const;
 
-  bool tryCoalesce(const CongClass &A, const CongClass &B);
+  bool tryCoalesce(const CongClass &, const CongClass &);
 };
+
+struct VirtCoalescer {
+  std::forward_list<CongClass> Classes;
+
+  void insertCSSA(Function &F) {
+    // Insert all value copies. We need to do this to ensure that virtualized
+    // phi vreg classes are fully isolated. If these are not fully isolated,
+    // then it is possible that a) false interferences and/or b) incorrect cong
+    // class members upon merge.
+    for (BasicBlock &BB : F) {
+      for (PHINode &PN : BB.phis()) {
+        // Create at insert point.
+        IntrinsicInst *Copy = createCopy(PN);
+        PN.replaceAllUsesWith(Copy);
+        Copy->setOperand(0, &PN);
+      }
+    }
+
+    // want to be able to traverse like this, to avoid needing to traverse
+    // bbs/phis or do more val-to-cc densemap lookups than we need.
+    //
+    // in agg coalescing, we can iterate over copies in any order we want, and
+    // only once.  proof is to think about coalescing on an igraph. we only
+    // coalesce at affinity edges, and each coalescing grows some iregion a bit
+    // larger.  suppose by contradiction. then some affinity edge q could only
+    // be coalescsed *after* another edge p. but that does not make sense.
+    // result: we can choose to iterate over copies in phi-order so that we
+    // don't have to keep reloading copy source's cong class.
+    //
+    // in that order in mat-coal, the initial phi class will contain a fully
+    // isolated phi, which really means that we will never a merge a phi class
+    // with something else until our iteration reaches that phi first. this is
+    // equivalent to boissinot's "one should never have to test with..." stmt
+    // except we do it right via the initial full value copy insertion. result:
+    // we don't even have to pre-allocate a cc for a phi until iteration reaches
+    // it.
+    for (BasicBlock &BB : F)
+      for (PHINode &PN : BB.phis())
+        coalesceVirtual(PN);
+  }
+
+  // RAUW a copy from IR and optionally pop from its vreg class. Popping mainly
+  // needed by incremental coalescing.
+  void rauw(IntrinsicInst &Copy, CongClass *CC = nullptr) {
+    LLVM_DEBUG(dbgs() << "RAUW-ing " << Copy << "\n");
+    if (CC) {
+      LLVM_DEBUG(dbgs() << "Popping from vreg class.\n");
+      // In-place coalescing: Remove Copy from vreg class and IR.
+      auto It =
+          find_if(*CC, [](const CongValue &Val) { return Val.I == Copy; });
+      assert(It != CC->end());
+      CC->erase(It);
+    }
+
+    Copy.replaceAllUsesWith(Copy.getOperand(1));
+    auto *Marker = cast<Instruction>(Copy.getOperand(0));
+    Copy.eraseFromParent();
+
+    // Delete useless parallel copy markers.
+    if (Marker->use_empty())
+      Marker->eraseFromParent();
+  }
+
+  void coalesceVirtual(PHINode &PN) {
+    // Init PN's vreg class.
+    CongClass &CC = Class.emplace_back();
+    for (unsigned OpNum = 0; OpNum < PN.getNumIncomingValues(); OpNum += 1) {
+      IntrinsicInst *Copy = createCopy(PN, OpNum);
+      CC.add(Copy);
+    }
+    CC.add(PN);
+    std::sort(CC.begin(), CC.end(), [](const CongValue &A, const CongValue &B) {
+      return A.dpoBefore(B);
+    });
+
+    // Operand copy coalescing.
+    for (Use &U : PN.operands()) {
+      auto *Copy = cast<IntrinsicInst>(U);
+      CongClass &SrcCC = getCongClass(Copy->getOperand(1));
+      if (&SrcCC == &CC) {
+        // Possible if SrcCC and CC had multiple affinities, e.g. if a phi had
+        // the same incoming value for more than one pred.
+        rauw(*Copy, &CC);
+      } else if (!intersects(CC, SrcCC)) {
+        rauw(*Copy, &CC);
+        mergeInto(CC, SrcCC);
+      }
+    }
+
+    // Value copy coalescing.
+    assert(PN.hasOneUse());
+    auto *ValCopy = cast<IntrinsicInst>(PN.user_begin());
+    CongClass &DstCC = getCongClass(ValCopy);
+    if (&DstCC == &CC) {
+      // TODO: Not sure if this is ever taken.
+      rauw(*ValCopy, &DstCC);
+    } else if (!intersects(CC, DstCC)) {
+      rauw(*ValCopy, &DstCC);
+      mergeInto(CC, DstCC);
+    }
+
+    // At this point: CC has been updated; appropriate copies removed from CC
+    // and IR;
+
+    // Goals:
+    //
+    // - if a copy has been coalesced, we don't want to keep it around in the
+    // dfs vec. this would just slow down interference checks and extra
+    // memory.
+    // - want to do virtualized.
+    //
+    // try mat-coal: build dfsvec of inserted copies, then check each operand
+    // copy's source class, try to merge, if merged then reach in and remove
+    // that copy from dfsvec and also erase inserted copy.
+    //
+    // problems: removal costs another o(n) scan plus memmove/cpy.
+    for (unsigned OpNum = 0; OpNum < PN.getNumIncomingValues(); OpNum += 1) {
+      // flip operand use off, merge operand class with ours, also kill off
+      // this vcopy.
+    }
+
+    for (PHINode &PN : BB.phis()) {
+      // In a non-virtualized setting, PN's vreg class would initially contain
+      // copies + isolated phi and these are guaranteed not to intersect. Then
+      // one-by-one we check if we can coalesce each copy by merging copy
+      // source into class and checking for intersection. Only source of
+      // interference is op-op or op-copy.
+      //
+      // Would virtualization miss any op-copy interferences? Is op-copy
+      // possible?
+      //
+      // Unknown. Not investing more time towards proving this.
+      //
+      // Initializing with virtual copies and having to handle materialization
+      // seems only marginally less expensive and more complex than
+      // materialized coalescing (inserting real copies then coalescing). So
+      // let's go with the latter once more.
+      //
+      // Choices for mat-coal:
+      //
+      // - insert phi-by-phi.
+      // - insert for all phis, block-by-block.
+      //
+      // Looks like we will have to insert all value copies because when
+      // virt-coal we could be testing against another phi cong class that has
+      // not fully materialized yet.
+      //
+      // ;w
+      //
+
+      CongClass &PCC = initializePhiClass(PN);
+      // PCC: {c1, c2, ..., p0}
+      // materialized coalesce: c1 = copy(a1), try {a1, c1, ...}
+      // virt coal: try {a1, c2, ...}. if it works,
+      // so focus on the interference check for operands.
+      // requires a ccdfsvec,
+      //
+      // type CC = Vec Value
+      // type AllCC = DenseMap Value CC
+      //
+      // self_interf :: CC -> Bool
+      // interf1 :: CC -> Value -> Maybe CC
+      // interf :: CC -> CC -> Maybe CC
+      //
+      // get_class :：Value -> CC
+      //
+      // try_coal :: AllCC -> Copy -> AllCC
+      // try_coal ccs (Copy dst src) = case interf (get_class ccs dcc)
+      // (get_class ccs scc) of
+      //     None -> ccs
+      //     Maybe new -> update (update ccs dst new) src new
+
+      for (unsigned Idx = 0; Idx < PN.getNumIncomingValues(); Idx += 1) {
+        coalesceOperandCopy(PCC, PN, Idx);
+      }
+      insertOperandCopy(PN, Idx);
+
+      // Coalesce value copy.
+      assert(PN.hasOneUse() && "Only use of phi should be its value copy.");
+      auto *Copy = cast<IntrinsicInst>(PN.user_begin());
+    }
+  }
+
+  void insertOperandCopy(PHINode &PN, unsigned Idx) {
+    // pick out phi class
+    // test if that op Idx interferes with the class.
+    // if so, replace with copy.
+    // if not, add into class.
+  }
+
+  void howThisWorks(PHINode &);
+};
+
+void VirtCoalescer::coalesceVirtual(PHINode &PN, CongClass &PCC) {
+  // PCC is PN's coalescing class. Look for a non-interfering set of PN's
+  // operands and add to PCC.
+  for (unsigned OpNum = 0; OpNum < PN.getNumIncomingValues(); OpNum += 1) {
+    Use &U = PN.getOperandUse(OpNum);
+    Value *V = U.get();
+    U.set(nullptr);
+
+    // Check if virtual copy can be coalesced. Do it if so.
+    if (!tryCoalesce(*V, PCC)) {
+      // This operand interferes, insert a copy to break its live range.
+      IntrinsicInst *Copy = PhiSetup.insertCopy(V);
+      U.set(Copy);
+    } else
+      U.set(V);
+  }
+}
+
+void VirtCoalescer::howThisWorks(PHINode &PN) {
+  // Roughly:
+
+  CongClass &PCC = *getCongClass(PN);
+
+  // Currently only operands are virtual. Should update coalescing classes as
+  // needed.
+  coalesceVirtual(PN, PCC);
+
+  // Check if value copy can be coalesced and update CC.
+  auto *ValCopy = cast<IntrinsicInst>(PN.user_begin());
+  tryCoalesce(*ValCopy, PCC);
+}
 
 static const BasicBlock &getUseBB(const Use &U) {
   assert(isa<Instruction>(U.get()) && "Only use on instruction uses.");
@@ -254,6 +552,8 @@ struct PhiSetup {
                                              None, None, *Pred)});
   }
 
+  void breakPhiRanges() const { ; }
+
   // Insert copies; init PN's cong class.
   void setup(PHINode &PN) {
     CongClass &CC = CSSA.ToClass.insert(
@@ -264,44 +564,71 @@ struct PhiSetup {
           appendIntrin(Intrinsic::internal_copy, {PN.getType()},
                        {Pair.second, PN.getIncomingValue(OpNum)}, *Pred);
     }
+  }
 
-    void insertPhiCopies(BasicBlock & BB) {
-      if (BB.empty() || !isa<PHINode>(BB.begin()))
-        return;
-      const DomTreeNode &N = *DT.getNode(&BB);
+  void insertPhiCopies(BasicBlock &BB) {
+    if (BB.empty() || !isa<PHINode>(BB.begin()))
+      return;
+    const DomTreeNode &N = *DT.getNode(&BB);
 
-      // Our goal is to break phi live ranges by inserting a copy for each
-      // (unique) operand and a final copy for the phi itself. Unfortunately,
-      // phis of a given block are not currently required to have the same
-      // operand orderings.
+    // Note that phis of a given block could have differing operand order.
 
-      IRBuilder<> NonPhi(BB.getFirstNonPHI());
+    IRBuilder<> NonPhi(BB.getFirstNonPHI());
 
-      for (BasicBlock *Pred : predecessors(&BB)) {
-        IRBuilder<> IRB(Pred->getTerminator());
-        CallInst *Parallel = &createIntrinsic(Intrinsic::internal_parallel_copy,
-                                              None, None, IRB);
+    for (BasicBlock *Pred : predecessors(&BB)) {
+      IRBuilder<> IRB(Pred->getTerminator());
+      CallInst *Parallel =
+          &createIntrinsic(Intrinsic::internal_parallel_copy, None, None, IRB);
 
-        // Insert operand copies.
-        for (PHINode &PN : BB.phis()) {
-          insertCopy(PN, PN.getBasicBlockIndex(Pred), Parallel, IRB);
-          ToClass.insert(
-              {&PN, addCongClass({&PN, N.getDFSNumIn(), N.getDFSNumOut()})});
-        }
-      }
-
-      // Break phi live ranges.
-      for (Instruction &I : BB) {
-        if (!isa<PHINode>(I))
-          break;
-        auto &PN = cast<PHINode>(I);
-        CallInst &P_ = createIntrinsic(Intrinsic::ssa_copy, {PN.getType()},
-                                       {UndefValue::get(PN.getType())}, NonPhi);
-        PN.replaceAllUsesWith(&P_);
-        P_.setOperand(0, &PN);
+      // Insert operand copies.
+      for (PHINode &PN : BB.phis()) {
+        insertCopy(PN, PN.getBasicBlockIndex(Pred), Parallel, IRB);
+        ToClass.insert(
+            {&PN, addCongClass({&PN, N.getDFSNumIn(), N.getDFSNumOut()})});
       }
     }
+
+    // Break phi live ranges.
+    for (Instruction &I : BB) {
+      if (!isa<PHINode>(I))
+        break;
+      auto &PN = cast<PHINode>(I);
+      CallInst &P_ = createIntrinsic(Intrinsic::ssa_copy, {PN.getType()},
+                                     {UndefValue::get(PN.getType())}, NonPhi);
+      PN.replaceAllUsesWith(&P_);
+      P_.setOperand(0, &PN);
+    }
   }
+};
+
+// Main improvements with new approach:
+//
+// - operate one bb at a time, simplifies reasoning and reduces peak mem
+// usage.
+// - optimized cc-inst coalescing, no singleton ccs.
+// - single intrinsic kind for all copies.
+//
+// Still inserting then removing most. Virtualization is more complex and
+// might not be able to coalesce all copies, would at least need phi dest
+// copies.
+struct Coalescer {
+  // Should only need exactly one CC per phi.
+  std::forward_list<CongClass> Classes;
+  DenseMap<const Instruction *, CongClass *> ToClass;
+
+  // Simultaneously check for intersection between Dest and Src and attempt to
+  // coalesce into Dest, returning true upon success. Exists to save an extra
+  // iteration from a separate merge step.
+  bool tryCoalesce(const CongClass &Dest, const CongClass &);
+
+  // Optimized for a single instruction. TODO: Store singleton classes instead
+  // of repeated look-ups.
+  bool tryCoalesce(const CongClass &, CongValue &);
+
+  void coalesceCopies(ArrayRef<Copy>);
+
+  // Setup-related routines.
+  void addCongClass();
 };
 
 struct CSSA {
@@ -495,6 +822,8 @@ struct CSSA {
 
         std::sort(
             PC.Members.begin(), PC.Members.end(),
+            // TODO: THIS IS TOTALLY WRONG! Dominance is not the correct sort
+            // order.
             [](const CongValue &A, const CongValue &B) { return A.dom(B); });
         LLVM_DEBUG(dbgs() << "Sorted class:" << PC << "\n");
       }
