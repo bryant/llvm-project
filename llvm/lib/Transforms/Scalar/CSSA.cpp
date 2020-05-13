@@ -26,9 +26,9 @@ using namespace llvm;
 static cl::opt<bool> CoalesceCopies("cssa-coalesce", cl::init(true),
                                     cl::Hidden);
 
+template <typename T>
 static IntrinsicInst &createIntrinsic(Intrinsic::ID IID, ArrayRef<Type *> Tys,
-                                      ArrayRef<Value *> Vals,
-                                      IRBuilder<> &IRB) {
+                                      ArrayRef<Value *> Vals, T &&IRB) {
 #if NVVM_VERSION < 700
   Module *M = IRB.GetInsertBlock()->getParent()->getParent();
   Value *Intrin = Intrinsic::getDeclaration(M, IID, Tys);
@@ -39,20 +39,6 @@ static IntrinsicInst &createIntrinsic(Intrinsic::ID IID, ArrayRef<Type *> Tys,
 #else
   return *cast<IntrinsicInst>(IRB.CreateIntrinsic(IID, Tys, Vals));
 #endif
-}
-
-static IntrinsicInst &insertCopyImpl(ArrayRef<Type *> Tys,
-                                     ArrayRef<Value *> Vals, IRBuilder<> &IRB) {
-  return createIntrinsic(Intrinsic::nvvm_internal_copy, Tys, Vals, IRB);
-}
-
-template <typename T>
-static IntrinsicInst &insertCopy(PHINode &P, unsigned OpNum, Value *PCopy,
-                                 T &&IRB) {
-  auto &Copy =
-      insertCopyImpl({P.getType()}, {PCopy, P.getIncomingValue(OpNum)}, IRB);
-  P.setIncomingValue(OpNum, &Copy);
-  return Copy;
 }
 
 struct PhiCopy {
@@ -86,8 +72,7 @@ struct PhiCopy {
 
 struct CongValue {
   Instruction *I;
-  unsigned DFSIn;
-  unsigned DFSOut;
+  const DomTreeNode *N;
   unsigned LocalNum;
 
   bool dom(const CongValue &Other) const {
@@ -142,17 +127,7 @@ struct CSSA {
   CSSA(Function &F, const MergeSets &MS) : F(F), DT(MS.getDomTree()), MS(MS) {}
 
   CongValue fromInst(Instruction *I) {
-    if (auto *II = dyn_cast<IntrinsicInst>(I))
-      if (II->getIntrinsicID() == Intrinsic::nvvm_internal_copy) {
-        // For parallel copies, DFS and local numbering should come from the
-        // parallel marker.
-        auto *Marker = cast<IntrinsicInst>(I->getOperand(0));
-        const DomTreeNode &N = *DT.getNode(Marker->getParent());
-        return {I, N.getDFSNumIn(), N.getDFSNumOut(),
-                LocalNum.find(Marker)->second};
-      }
-    const DomTreeNode &N = *DT.getNode(I->getParent());
-    return {I, N.getDFSNumIn(), N.getDFSNumOut(), LocalNum.find(I)->second};
+    return {I, DT.getNode(I->getParent()), LocalNum.find(I)->second};
   }
 
   // Is Def live at N? TODO: If N is unreachable, this could be an issue.
@@ -225,9 +200,8 @@ struct CSSA {
   // Given intersection-free sets A and B, decide if the combination of both
   // self-intersects.
   bool intersects(const CongClass &A, const CongClass &B) const {
-    // TODO: This does Budimlic checks over A merged with B where both are
-    // DPO-ordered, but we could also do the actual merge here to save an
-    // extra iter. May not be worthwhile, though.
+    // TODO: The order of iter here is identical to merging. Possibly save by
+    // performing both simultaneously.
 
     LLVM_DEBUG(dbgs() << "Intersecting\n " << A << "\n  and" << B << "\n");
 
@@ -293,174 +267,136 @@ struct CSSA {
     LLVM_DEBUG(dbgs() << "Coalesced cong class: " << A << "\n");
   }
 
-  CongClass *addCongClass(CongValue V) {
-    Classes.push_front({{V}});
-    return &Classes.front();
-  }
-
   // Find I's congruence class or else create one and return it.
   CongClass &getCongClass(Instruction &I) {
     auto Pair = ToClass.insert({&I, nullptr});
-    if (Pair.second)
-      Pair.first->second = addCongClass(fromInst(&I));
+    if (Pair.second) {
+      Classes.push_front({{fromInst(&I)}});
+      Pair.first->second = &Classes.front();
+    }
     return *Pair.first->second;
   }
 
-  bool coalesceAllCopies() {
-    for (bool Changed = true; Changed;) {
-      Changed = false;
-      for (unsigned Idx = 0; Idx < Copies.size(); Idx += 1) {
-        LLVM_DEBUG(dbgs() << "Attempting to coalesce " << *Copies[Idx].I
-                          << "\n");
-        // TODO: Handle constants and arguments as though they were defined in
-        // entry.
-        if (!isa<Instruction>(Copies[Idx].getSource()))
-          continue;
-
-        // TODO: Enhancement: Optimize for singleton vreg classes, which could
-        // be common.
-        CongClass &CC = getCongClass(*Copies[Idx].I);
-        CongClass &SrcCC =
-            getCongClass(*cast<Instruction>(Copies[Idx].getSource()));
-
-        if (&CC == &SrcCC) {
-          LLVM_DEBUG(dbgs() << "Trivially coalescable.\n");
-          Coalescable.push_back(Copies[Idx]);
-          std::swap(Copies.back(), Copies[Idx]);
-          Copies.pop_back();
-          Idx -= 1;
-
-          Changed = true;
-        } else if (!intersects(CC, SrcCC)) {
-          LLVM_DEBUG(dbgs() << "No interference, can coalesce!\n");
-          mergeInto(CC, SrcCC);
-
-          Coalescable.push_back(Copies[Idx]);
-          std::swap(Copies.back(), Copies[Idx]);
-          Copies.pop_back();
-          Idx -= 1;
-
-          Changed = true;
-        }
-      }
-    }
-
-    if (Coalescable.empty())
-      return false;
-
-    // Coalesce!
-    for (PhiCopy &PC : Coalescable)
-      PC.coalesce();
-
-    return true;
+  CongClass &addCongClass(CongValue V) {
+    Classes.push_front({{V}});
+    auto Pair = ToClass.insert({V.I, &Classes.front()});
+    assert(Pair.second);
+    return *Pair.first->second;
   }
 
-  // Initially, we want to split a phi node into operand and value copies, and
-  // group phi + copies into a single congruence class. TODO: This is done
-  // separately from copy insertion to work around a circular dependency b/n
-  // initial copy DPO num and dpoNum() needing a stable instruction list. The
-  // whole initialization process should be refactored.
-  CSSA &initPhiCongClass() {
-    auto add = [&](IntrinsicInst &Copy, CongClass &PhiCls) {
-      assert(Copy.getIntrinsicID() == Intrinsic::nvvm_internal_copy);
-      LLVM_DEBUG(dbgs() << "Init " << Copy << " to phi-class "
-                        << *PhiCls.Members[0].I << "\n");
-      Copies.push_back({&Copy});
-      ToClass.insert({&Copy, &PhiCls});
-      PhiCls.Members.push_back(fromInst(&Copy));
-    };
-
-    for (BasicBlock &BB : F) {
-      for (auto It = BB.begin(); It != BB.end() && isa<PHINode>(It); ++It) {
-        auto &PN = *cast<PHINode>(It);
-        CongClass &PC = getCongClass(PN);
-        assert(PC.size() == 1 && "Assumption: This is called immediately after "
-                                 "insertPhiCopies and dpoNum.");
-        PC.Members[0].LocalNum = LocalNum.find(&PN)->second;
-
-        assert(PN.hasOneUse() && "Should only be used by a copy.");
-        Copies.push_back({cast<IntrinsicInst>(*PN.user_begin())});
-        // add(*cast<IntrinsicInst>(*PN.user_begin()), PC);
-        for (unsigned PredNum = 0; PredNum < PN.getNumIncomingValues();
-             PredNum += 1)
-          add(*cast<IntrinsicInst>(PN.getIncomingValue(PredNum)), PC);
-
-        std::sort(PC.Members.begin(), PC.Members.end(),
-                  [](const CongValue &A, const CongValue &B) {
-                    return A.dpoBefore(B);
-                  });
-        LLVM_DEBUG(dbgs() << "Sorted class:" << PC << "\n");
-      }
-    }
-    return *this;
+  unsigned localNumber(const Instruction &I) {
+    return LocalNum.insert({&I, LocalCount++}).first->second;
   }
 
-  void insertPhiCopies(BasicBlock &BB) {
-    if (BB.empty() || !isa<PHINode>(BB.begin()))
+  // Insert and number a parallel copy marker.
+  CongValue createMarker(BasicBlock &BB, Optional<Instruction *> Ins) {
+    IntrinsicInst &Marker =
+        createIntrinsic(Intrinsic::nvvm_internal_parallel_copy, {}, {},
+                        IRBuilder<>(Ins ? *Ins : BB->getTerminator()));
+    return {&Marker, DT.getNode(BB), localNumber(Marker)};
+  }
+
+  // Side concerns: Updating cong class with this inst; setting value op.
+  CongValue insertCopy(Type &Ty, const CongValue &Marker,
+                       Optional<Instruction *> Ins) {
+    CongValue Ret = Marker;
+    IRBuilder<> IRB(Ins ? *Ins : Marker.getParent().getTerminator());
+    Ret.I = &createIntrinsic(Intrinsic::nvvm_internal_copy, {&Ty},
+                             {&Marker.getInst(), UndefValue::get(&Ty)}, IRB);
+    // TODO: Bug: Local numbering for copy inst.
+    return Ret;
+  }
+
+  // Try to coalesce a pair of vreg classes. CopyCls must be Copy's class.
+  bool tryCoalesce(PhiCopy Copy, CongClass &CopyCls, CongClass &Other) {
+    if (&CopyCls == &Other) {
+      // Possible when multiple affinities b/n same classes, e.g. if a phi had
+      // the same incoming value for more than one pred.
+      Copy.coalesce();
+      CopyCls.erase(Copy);
+    } else if (!intersects(CopyCls, Other)) {
+      Copy.coalesce();
+      CopyCls.erase(Copy);
+      // TODO: Enhancement: Optimize merging. For singleton classes, this could
+      // be logarithmic instead of linear.
+      mergeInto(CopyCls, Other);
+    }
+  }
+
+  // Value copies should have already been inserted. Inserts operand copies and
+  // coalesces phi-by-phi.
+  void insertAndCoalesce(BasicBlock &BB) {
+    if (!BB.getFirstNonPHI())
       return;
-    const DomTreeNode &N = *DT.getNode(&BB);
 
-    // Our goal is to break phi live ranges by inserting a copy for each
-    // (unique) operand and a final copy for the phi itself. Unfortunately, phis
-    // of a given block are not currently required to have the same operand
-    // orderings.
-
-    IRBuilder<> NonPhi(BB.getFirstNonPHI());
-
-    for (BasicBlock *Pred : predecessors(&BB)) {
-      IRBuilder<> IRB(Pred->getTerminator());
-      CallInst *Parallel = &createIntrinsic(
-          Intrinsic::nvvm_internal_parallel_copy, None, None, IRB);
-
-      // Insert operand copies.
-      for (Instruction &I : BB) {
-        if (!isa<PHINode>(I))
-          break;
-        auto &PN = cast<PHINode>(I);
-        insertCopy(PN, PN.getBasicBlockIndex(Pred), Parallel, IRB);
-        ToClass.insert(
-            {&PN, addCongClass({&PN, N.getDFSNumIn(), N.getDFSNumOut()})});
-      }
+    DenseMap<const BasicBlock *, CongValue> Markers;
+    Markers.reserve(std::distance(BB.pred_begin(), BB.pred_end()));
+    for (BasicBlock &Pred : make_range(BB.pred_begin(), BB.pred_end())) {
+      // Accounts for multiple identical edges.
+      auto Pair = Markers.insert({&Pred, {}});
+      if (Pair.second)
+        Pair.first->second = createMarker(Pred, None);
     }
 
-    // Break phi live ranges.
-    for (Instruction &I : BB) {
-      if (!isa<PHINode>(I))
-        break;
-      auto &PN = cast<PHINode>(I);
-      CallInst &P_ = createIntrinsic(Intrinsic::ssa_copy, {PN.getType()},
-                                     {UndefValue::get(PN.getType())}, NonPhi);
-      PN.replaceAllUsesWith(&P_);
-      P_.setOperand(0, &PN);
+    for (PHINode &PN : BB.phis()) {
+      // Insert operand copies.
+      CongClass &PC = Coalescer.getCongClass(PN);
+      for (Use &U : PN.operands()) {
+        CongValue &Copy = PC.add(insertCopy(*PN.getType(), Marker, None));
+        PhiCopy(Copy.I).setSource(U.get());
+        U.setCopy(I);
+      }
+
+      PC.sort();
+
+      // Coalesce operands.
+      for (Use &U : PN.operands()) {
+        PhiCopy Copy(*cast<IntrinsicInst>(U));
+        tryCoalesce(Copy, PC, getCongClass(Copy.getSource()));
+      }
+
+      // Coalesce value copy.
+      assert(PN.hasOneUse());
+      PhiCopy ValCopy(*cast<IntrinsicInst>(PN.user_begin()));
+      tryCoalesce(ValCopy, getCongClass(ValCopy), PC);
     }
   }
 
   // TODO: This should be idempotent.
-  CSSA &insertCopies() {
+  void run() {
 #if NVVM_VERSION < 700
     DT.DT->updateDFSNumbers();
 #else
     DT.updateDFSNumbers();
 #endif
+
+    // Simulaneously local number and insert value copies to ensure that phis
+    // are fully isolated at insertAndCoalesce time.  Otherwise, it is possible
+    // that a) false interferences (imagine virtualized swap-problem) and/or b)
+    // incorrect cong class members upon merge.
+    for (const BasicBlock &BB : F) {
+      auto It = BB.begin();
+      for (; It != BB.end() && isa<PHINode>(It); ++It)
+        localNumber(It);
+      if (It != BB.begin()) {
+        // There were phis. Insert value copies.
+        CongValue Mk = createMarker(BB, It);
+        for (PHINode &PN : BB.phis()) {
+          CongValue ValCopy = insertCopy(*PN.getType(), Mk, It);
+          addCongClass(ValCopy);
+          PN.replaceAllUsesWith(ValCopy.I);
+          PhiCopy(ValCopy).setSource(PN);
+        }
+      }
+      for (; It != BB.end(); ++It)
+        localNumber(It);
+    }
+
     for (BasicBlock &BB : F)
-      insertPhiCopies(BB);
+      insertAndCoalesce(BB);
+
     LLVM_DEBUG(dbgs() << "CSSA " << F.getName() << "\n" << F << "\n");
     verifyFunction(F);
-    return *this;
-  }
-
-  unsigned nextLocalNum(const Instruction &I) {
-    unsigned Ret = LocalCount;
-    // Leave a gap for first non-phi pcopy marker.
-    LocalCount += 2;
-    LocalNum.insert({&I, Ret});
-    return Ret;
-  }
-
-  CSSA &localNum() {
-    for (const BasicBlock &BB : F)
-      for (const Instruction &I : BB)
-        nextLocalNum(I);
     return *this;
   }
 };
@@ -487,11 +423,7 @@ struct CSSALegacyPass : public FunctionPass {
     if (skipFunction(F))
       return false;
 #endif
-    return CSSA(F, getAnalysis<MergeSetsPass>().getMS())
-        .insertCopies()
-        .localNum()
-        .initPhiCongClass()
-        .coalesceAllCopies();
+    return CSSA(F, getAnalysis<MergeSetsPass>().getMS()).run();
   }
 };
 
