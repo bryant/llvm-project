@@ -64,6 +64,7 @@ add_llvm_component_library(LLVMAnalysis
   MemoryLocation.cpp
   MemorySSA.cpp
   MemorySSAUpdater.cpp
+  MergeSets.cpp
   ModuleDebugInfoPrinter.cpp
   ModuleSummaryAnalysis.cpp
   MustExecute.cpp

@@ -283,6 +283,9 @@ protected:
   ///
   const SmallVectorImpl<NodeT *> &getRoots() const { return Roots; }
 
+  /// size - Returns the number of dominator tree nodes.
+  unsigned size() const { return DomTreeNodes.size(); }
+
   /// isPostDominator - Returns true if analysis based of postdoms
   ///
   bool isPostDominator() const { return IsPostDominator; }

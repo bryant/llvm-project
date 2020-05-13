@@ -603,8 +603,6 @@ int main(int argc, char **argv) {
   initializeExampleIRTransforms(Registry);
 #endif
 
-  initializeCSSAPassPass(Registry);
-
   cl::ParseCommandLineOptions(argc, argv,
     "llvm .bc -> .bc modular optimizer and analysis printer\n");
 

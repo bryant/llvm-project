@@ -41,8 +41,9 @@ namespace llvm {
 template <class Ptr, class USE_iterator> // Predecessor Iterator
 class PredIterator : public std::iterator<std::forward_iterator_tag,
                                           Ptr, ptrdiff_t, Ptr*, Ptr*> {
+protected:
   using super =
-      std::iterator<std::forward_iterator_tag, Ptr, ptrdiff_t, Ptr*, Ptr*>;
+      std::iterator<std::forward_iterator_tag, Ptr, ptrdiff_t, Ptr *, Ptr *>;
   using Self = PredIterator<Ptr, USE_iterator>;
   USE_iterator It;
 
