@@ -204,13 +204,8 @@ struct CSSA {
     // performing both simultaneously.
 
     LLVM_DEBUG(dbgs() << "Intersecting\n " << A << "\n  and" << B << "\n");
-
-    // Second element of pair denotes origination from A or B.
-    struct StackEntry {
-      CongValue V;
-      enum { FromA, FromB } Cls;
-    };
-    SmallVector<StackEntry, 32> Stack;
+    // Second element is true if CongValue came from A otherwise false (from B).
+    SmallVector<std::pair<CongValue, bool>, 32> Stack;
 
     for (unsigned IA = 0, IB = 0; IA < A.size() || IB < B.size();) {
       // Pick out the next element from either A or B in dom-forest order.
@@ -221,21 +216,21 @@ struct CSSA {
       // },
       // inbounds(ia) (but not ib) => a[ia++],
       // inbounds(ib) (but not ia) => b[ib++]
-      StackEntry Cur;
+      std::pair<CongClass, bool> Cur;
       if ((IA < A.size() && IB < B.size() && A[IA].dpoBefore(B[IB])) ||
           IB >= B.size())
-        Cur = {A[IA++], StackEntry::FromA};
+        Cur = {A[IA++], true};
       else
-        Cur = {B[IB++], StackEntry::FromB};
-      LLVM_DEBUG(dbgs() << "Cur: " << *Cur.V.I << "\n");
+        Cur = {B[IB++], false};
+      LLVM_DEBUG(dbgs() << "Cur: " << *Cur.first.I << "\n");
 
-      while (!Stack.empty() && !Stack.back().V.dom(Cur.V))
+      while (!Stack.empty() && !Stack.back().first.dom(Cur.first))
         Stack.pop_back();
 
       // Skip checking if TOS and Cur came from the same class since the fn
       // pre-condition already ensures no intersection.
-      if (!Stack.empty() && Stack.back().Cls != Cur.Cls &&
-          isLiveIn(Cur.V, Stack.back().V)) {
+      if (!Stack.empty() && Stack.back().second != Cur.second &&
+          isLiveIn(Cur.first, Stack.back().first)) {
         LLVM_DEBUG(dbgs() << "Would intersect.\n");
         return true;
       }
