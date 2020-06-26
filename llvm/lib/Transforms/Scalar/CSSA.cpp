@@ -9,46 +9,52 @@
 
 #define DEBUG_TYPE "do-cssa"
 #define PASS_NAME "Insert phi elim copies"
-#define NVVM_VERSION 700
+#define NVVM_VERSION 1100
+#define nvvm_internal_copy internal_copy
+#define nvvm_internal_parallel_copy internal_parallel_copy
 
 #include "llvm/Transforms/Scalar/CSSA.h"
 #include "llvm/Analysis/MergeSets.h"
-#include "llvm/IR/Dominators.h"
-#include "llvm/IR/IRBuilder.h"
-#include "llvm/IR/Verifier.h"
+#include "llvm/IR/IntrinsicInst.h"
+#include "llvm/IR/Module.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
+
+#if NVVM_VERSION < 700
+#include "llvm/Analysis/Dominators.h"
+#include "llvm/Analysis/Verifier.h"
+#else
+#include "llvm/IR/Dominators.h"
+#include "llvm/IR/Verifier.h"
+#endif
 
 #include <forward_list>
 
 using namespace llvm;
 
 // TODO: Hook this up to some part of ClientAPI, probably NVVMCodeGenOptions.
-static cl::opt<bool> CoalesceCopies("cssa-coalesce", cl::init(true),
-                                    cl::Hidden);
+cl::opt<bool> CoalesceCopies("cssa-coalesce", cl::init(false), cl::Hidden);
+
+static cl::opt<bool> DumpBefore("dump-before-cssa", cl::init(false),
+                                cl::Hidden);
 
 static IntrinsicInst &createIntrinsic(Intrinsic::ID IID, ArrayRef<Type *> Tys,
                                       ArrayRef<Value *> Vals,
-                                      Instruction *Ins) {
-  IRBuilder<> IRB(Ins);
-#if NVVM_VERSION < 700
-  Module *M = IRB.GetInsertBlock()->getParent()->getParent();
-  Value *Intrin = Intrinsic::getDeclaration(M, IID, Tys);
-  CallInst *CI = CallInst::Create(Intrin, Vals, "");
-  IRB.GetInsertBlock()->getInstList().insert(IRB.GetInsertPoint(), CI);
-  IRB.SetInstDebugLocation(CI);
+                                      const Twine &Prefix, Instruction *Ins) {
+  Module *M = Ins->getParent()->getParent()->getParent();
+  Function *Intrin = Intrinsic::getDeclaration(M, IID, Tys);
+  CallInst *CI = CallInst::Create(Intrin, Vals, Prefix, Ins);
+  // TODO: Debug info updates.
   return *cast<IntrinsicInst>(CI);
-#else
-  return *cast<IntrinsicInst>(IRB.CreateIntrinsic(IID, Tys, Vals));
-#endif
 }
 
 struct PhiCopy {
   IntrinsicInst *I;
 
   PhiCopy(Instruction &I) : I(&cast<IntrinsicInst>(I)) {
-    assert(this->I->getIntrinsicID() == Intrinsic::internal_copy);
+    assert(this->I->getIntrinsicID() == Intrinsic::nvvm_internal_copy);
   }
 
   Value *getSource() const { return I->getOperand(1); }
@@ -76,6 +82,7 @@ struct CongValue {
   }
 
   BasicBlock &getParent() const { return *I->getParent(); }
+
   const DomTreeNode &getNode() const { return *N; }
 };
 
@@ -95,10 +102,13 @@ struct CongClass {
   }
 
   void erase(const Instruction &I) {
-    auto It = find_if(Members, [&](const auto &Val) { return Val.I == &I; });
+    auto It = std::find_if(Members.begin(), Members.end(),
+                           [&](const CongValue &Val) { return Val.I == &I; });
     assert(It != Members.end());
     Members.erase(It);
   }
+
+  void dump() const;
 };
 
 raw_ostream &operator<<(raw_ostream &O, const CongClass &CC) {
@@ -113,8 +123,10 @@ raw_ostream &operator<<(raw_ostream &O, const CongClass &CC) {
   return O;
 }
 
+void CongClass::dump() const { dbgs() << *this; }
+
 static BasicBlock *getUseBlock(Use &U) {
-  if (auto *PN = dyn_cast<PHINode>(U))
+  if (auto *PN = dyn_cast<PHINode>(U.getUser()))
     return PN->getIncomingBlock(U);
   return cast<Instruction>(U.getUser())->getParent();
 }
@@ -126,11 +138,21 @@ struct CSSA {
 
   std::forward_list<IntrinsicInst *> AllMarkers;
   std::forward_list<CongClass> Classes;
+
+  // Each instruction belongs to a unique vreg class.
   DenseMap<const Instruction *, CongClass *> ToClass;
+
   DenseMap<const Instruction *, unsigned> LocalNum;
   unsigned LocalCount = 0;
 
   CSSA(Function &F, const MergeSets &MS) : F(F), DT(MS.getDomTree()), MS(MS) {}
+
+  // TODO: Enhancement: Extend liveness checking to handle unreachables.
+  const DomTreeNode *getDomNode(const BasicBlock *BB) const {
+    const DomTreeNode *Ret = DT.getNode(BB);
+    assert(Ret && "Found an edge case with unreachable blocks.");
+    return Ret;
+  }
 
   // Is Def live at N? TODO: Bug: Non-local dom checks will assert if N is
   // unreachable.
@@ -150,7 +172,12 @@ struct CSSA {
       });
 
     BitVector Mr = MS.getMergeInfo(N.getNode()).selfUnion();
-    for (Use &U : Def.I->uses()) {
+    for (auto Ut = Def.I->use_begin(); Ut != Def.I->use_end(); ++Ut) {
+#if NVVM_VERSION < 700
+      Use &U = Ut.getUse();
+#else
+      Use &U = *Ut;
+#endif
       const BasicBlock *UB = getUseBlock(U);
       auto *I = cast<Instruction>(U.getUser());
       if (&N.getParent() == UB) {
@@ -163,9 +190,9 @@ struct CSSA {
         continue;
       }
 
-      assert(DT.dominates(&Def.getNode(), DT.getNode(UB)) &&
+      assert(DT.dominates(&Def.getNode(), getDomNode(UB)) &&
              "How can Def not dominate use U?");
-      for (const DomTreeNode *UN = DT.getNode(UB); UN != &Def.getNode();
+      for (const DomTreeNode *UN = getDomNode(UB); UN != &Def.getNode();
            UN = UN->getIDom())
         if (Mr.test(MS.getMergeInfo(*UN).BitPos))
           // Some block in merge(N) + {N} doms U.
@@ -218,9 +245,8 @@ struct CSSA {
   // Merge B into A. TODO: Enhancement: For singleton classes, this could be
   // logarithmic instead of linear. Otherwise, iter order is same as interf.
   void mergeInto(CongClass &A, CongClass &B) {
-    if (!A.size()) {
-      std::swap(A.Members, B.Members);
-    } else if (!B.size())
+    LLVM_DEBUG(dbgs() << "mergeInto " << A << "\n  from " << B << "\n");
+    if (!A.size() || !B.size())
       return;
 
     CongClass Merged;
@@ -240,6 +266,13 @@ struct CSSA {
     std::swap(Merged.Members, A.Members);
     B.Members.clear();
     LLVM_DEBUG(dbgs() << "Coalesced cong class: " << A << "\n");
+    for (const CongValue &CV : A.Members) {
+      LLVM_DEBUG(dbgs() << "Val: " << *CV.I << " => ");
+      auto It = ToClass.find(CV.I);
+      assert(It != ToClass.end());
+      assert(It->second->size());
+      LLVM_DEBUG(dbgs() << *It->second << "\n");
+    }
   }
 
   // Find I's congruence class or else create one and return it. Specify CV to
@@ -248,10 +281,14 @@ struct CSSA {
     auto Pair = ToClass.insert({&I, nullptr});
     if (Pair.second) {
       Classes.push_front({{CV ? *CV
-                              : CongValue{&I, DT.getNode(I.getParent()),
+                              : CongValue{&I, getDomNode(I.getParent()),
                                           LocalNum.find(&I)->second}}});
       Pair.first->second = &Classes.front();
-    }
+      LLVM_DEBUG(dbgs() << "Created new class for " << I << ":"
+                        << Classes.front() << "\n");
+    } else
+      LLVM_DEBUG(dbgs() << "Got class for " << I << ":" << *Pair.first->second
+                        << "\n");
     return *Pair.first->second;
   }
 
@@ -262,20 +299,21 @@ struct CSSA {
   // Insert and number a parallel copy marker.
   CongValue createMarker(BasicBlock &BB, Optional<Instruction *> Ins) {
     IntrinsicInst &Marker =
-        createIntrinsic(Intrinsic::internal_parallel_copy, {}, {},
+        createIntrinsic(Intrinsic::nvvm_internal_parallel_copy, {}, {}, "pmk",
                         Ins ? *Ins : BB.getTerminator());
     AllMarkers.push_front(&Marker);
-    return {&Marker, DT.getNode(&BB), localNumber(Marker)};
+    return {&Marker, getDomNode(&BB), localNumber(Marker)};
   }
 
   // Side concerns: Updating cong class with this inst; setting value op.
   CongValue insertCopy(Type &Ty, const CongValue &Marker,
                        Optional<Instruction *> Ins) {
     CongValue Ret = Marker;
-    Ret.I = &createIntrinsic(Intrinsic::internal_copy, {&Ty},
-                             {Marker.I, UndefValue::get(&Ty)},
+    Ret.I = &createIntrinsic(Intrinsic::nvvm_internal_copy, {&Ty},
+                             {Marker.I, UndefValue::get(&Ty)}, "pcp",
                              Ins ? *Ins : Marker.getParent().getTerminator());
-    LocalNum.insert({Ret.I, Ret.LocalNum});
+    auto Pair = LocalNum.insert({Ret.I, Ret.LocalNum});
+    assert(Pair.second && "Copies should be inserted exactly once.");
     return Ret;
   }
 
@@ -284,6 +322,8 @@ struct CSSA {
     auto coalesce = [&]() {
       LLVM_DEBUG(dbgs() << "Coalescing " << *Copy.I << "\n");
       CopyCls.erase(*Copy.I);
+      LocalNum.erase(Copy.I);
+      ToClass.erase(Copy.I);
       Copy.I->replaceAllUsesWith(Copy.getSource());
       Copy.I->eraseFromParent();
     };
@@ -304,24 +344,25 @@ struct CSSA {
   // coalesces phi-by-phi. TODO: Bug: Skip if BB is unreachable because
   // intersection check will not work.
   void insertAndCoalesce(BasicBlock &BB) {
-    if (!BB.getFirstNonPHI())
+    if (BB.empty() || !isa<PHINode>(BB.begin()))
       return;
 
     LLVM_DEBUG(dbgs() << "Examining phis of " << BB.getName() << "\n");
     DenseMap<const BasicBlock *, CongValue> Markers;
-    Markers.reserve(std::distance(pred_begin(&BB), pred_end(&BB)));
-    for (BasicBlock *Pred : predecessors(&BB)) {
+    for (BasicBlock *Pred : make_range(pred_begin(&BB), pred_end(&BB))) {
       // Accounts for multiple identical edges.
       auto Pair = Markers.insert({Pred, {}});
       if (Pair.second)
         Pair.first->second = createMarker(*Pred, None);
     }
 
-    for (PHINode &PN : BB.phis()) {
+    for (auto Pt = BB.begin(); Pt != BB.end() && isa<PHINode>(Pt); ++Pt) {
+      auto &PN = *cast<PHINode>(Pt);
       // Insert operand copies.
       CongClass &PC = getCongClass(PN, None);
       for (auto &Pair : Markers) {
         CongValue &Copy = PC.add(insertCopy(*PN.getType(), Pair.second, None));
+        ToClass.insert({Copy.I, &PC});
         for (unsigned OpNum = 0; OpNum < PN.getNumOperands(); OpNum += 1)
           if (PN.getIncomingBlock(OpNum) == Pair.first) {
             PhiCopy(*Copy.I).setSource(*PN.getOperand(OpNum));
@@ -332,11 +373,16 @@ struct CSSA {
 
       LLVM_DEBUG(dbgs() << "Fn is now " << F << "\n");
 
-      sort(PC.Members,
-           [](const auto &A, const auto &B) { return A.dpoBefore(B); });
+      std::sort(PC.Members.begin(), PC.Members.end(),
+                [](const CongValue &A, const CongValue &B) {
+                  return A.dpoBefore(B);
+                });
+
+      if (!CoalesceCopies)
+        continue;
 
       // Coalesce operands.
-      for (Use &U : PN.operands()) {
+      for (Use &U : make_range(PN.op_begin(), PN.op_end())) {
         LLVM_DEBUG(dbgs() << "Examining op " << *U << " of " << PN << "\n");
         // U would not be a copy if PN has multiple identical incomings.
         if (auto *II = dyn_cast<IntrinsicInst>(U)) {
@@ -375,7 +421,8 @@ struct CSSA {
       if (It != BB.begin()) {
         // There were phis. Insert value copies.
         CongValue Mk = createMarker(BB, &*It);
-        for (PHINode &PN : BB.phis()) {
+        for (auto Pt = BB.begin(); Pt != BB.end() && isa<PHINode>(Pt); ++Pt) {
+          auto &PN = *cast<PHINode>(Pt);
           CongValue ValCopy = insertCopy(*PN.getType(), Mk, &*It);
           getCongClass(*ValCopy.I, ValCopy);
           PN.replaceAllUsesWith(ValCopy.I);
@@ -396,14 +443,17 @@ struct CSSA {
         Marker->eraseFromParent();
 
     LLVM_DEBUG(dbgs() << "Minimal CSSA: " << F << "\n");
-    verifyFunction(F);
+    LLVM_DEBUG(verifyFunction(F));
   }
 };
 
 struct CSSALegacyPass : public FunctionPass {
   static char ID;
+  VisitFn VisitMembers;
 
-  CSSALegacyPass() : FunctionPass(ID) {
+  CSSALegacyPass() : CSSALegacyPass([](ArrayRef<Instruction *>) {}) {}
+
+  CSSALegacyPass(VisitFn VFN) : FunctionPass(ID), VisitMembers(std::move(VFN)) {
     initializeCSSALegacyPassPass(*PassRegistry::getPassRegistry());
   }
 
@@ -417,13 +467,25 @@ struct CSSALegacyPass : public FunctionPass {
     AU.addRequired<MergeSetsWrapper>();
   }
 
-  // TODO: Bug: Maybe require unreachables to be pruned.
   bool runOnFunction(Function &F) override {
 #if NVVM_VERSION >= 700
     if (skipFunction(F))
       return false;
 #endif
-    CSSA(F, getAnalysis<MergeSetsWrapper>().getMS()).run();
+    if (DumpBefore)
+      dbgs() << "IR Module before CSSA:\n" << *F.getParent() << "\n";
+    CSSA Coal(F, getAnalysis<MergeSetsWrapper>().getMS());
+    Coal.run();
+    for (CongClass &CC : Coal.Classes) {
+      if (!CC.size())
+        continue;
+      // TODO: Rework this.
+      std::vector<Instruction *> Tmp;
+      Tmp.reserve(CC.Members.size());
+      for (const CongValue &CV : CC.Members)
+        Tmp.push_back(CV.I);
+      VisitMembers(Tmp);
+    }
     return true;
   }
 };
@@ -435,3 +497,7 @@ INITIALIZE_PASS_DEPENDENCY(MergeSetsWrapper)
 INITIALIZE_PASS_END(CSSALegacyPass, DEBUG_TYPE, PASS_NAME, false, false)
 
 Pass *nvvm::createCSSAPass() { return new CSSALegacyPass(); }
+
+Pass *nvvm::createCSSAPass(VisitFn VFN) {
+  return new CSSALegacyPass(std::move(VFN));
+}
